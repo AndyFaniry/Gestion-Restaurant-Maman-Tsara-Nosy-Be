@@ -1,0 +1,814 @@
+===== EXPORT COMPLET SPRING =====
+Date : ven. 31 juil. 2026 00:20:09 EAT
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/caisse/MouvementCaisse.java
+======================================
+package com.gestion.restaurant.entity.caisse;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "mouvementcaisse")
+@Data
+@NoArgsConstructor
+public class MouvementCaisse {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "datemouvement", nullable = false)
+    private LocalDate dateMouvement;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal montant;
+
+    @ManyToOne
+    @JoinColumn(name = "typemouvement", nullable = false)
+    private TypeMouvementCaisse typeMouvement;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/caisse/TypeMouvementCaisse.java
+======================================
+package com.gestion.restaurant.entity.caisse;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "typemouvementcaisse")
+@Data
+@NoArgsConstructor
+public class TypeMouvementCaisse {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/clients/Clients.java
+======================================
+package com.gestion.restaurant.entity.clients;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "clients")
+@Data
+@NoArgsConstructor
+public class Clients {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 50)
+    private String nom;
+
+    @Column(nullable = false, length = 50)
+    private String prenom;
+
+    @Column(nullable = false, length = 50)
+    private String contact;
+
+    @ManyToOne
+    @JoinColumn(name = "idtypeclient", nullable = false)
+    private TypeClient typeClient;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/clients/TypeClient.java
+======================================
+package com.gestion.restaurant.entity.clients;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "typeclient")
+@Data
+@NoArgsConstructor
+public class TypeClient {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/commandes/Commandes.java
+======================================
+package com.gestion.restaurant.entity.commandes;
+import com.gestion.restaurant.entity.clients.Clients;
+import com.gestion.restaurant.entity.livraisons.ZonesLivraison;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "commandes")
+@Data
+@NoArgsConstructor
+public class Commandes {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idclient", nullable = false)
+    private Clients client;
+
+    @Column(name = "datecommande", nullable = false)
+    private LocalDate dateCommande;
+
+    @ManyToOne
+    @JoinColumn(name = "idzonelivraison", nullable = false)
+    private ZonesLivraison zoneLivraison;
+
+    @Column(name = "montanttotal", nullable = false, precision = 16, scale = 3)
+    private BigDecimal montantTotal;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/commandes/DetailsCommandes.java
+======================================
+package com.gestion.restaurant.entity.commandes;
+import com.gestion.restaurant.entity.plats.Plats;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "detailscommandes")
+@Data
+@NoArgsConstructor
+public class DetailsCommandes {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idcommande", nullable = false)
+    private Commandes commande;
+
+    @ManyToOne
+    @JoinColumn(name = "idplat", nullable = false)
+    private Plats plat;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
+
+    @Column(name = "prixunitaire", nullable = false, precision = 16, scale = 3)
+    private BigDecimal prixUnitaire;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal montant;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/commandes/FacturesCommandes.java
+======================================
+package com.gestion.restaurant.entity.commandes;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "facturescommandes")
+@Data
+@NoArgsConstructor
+public class FacturesCommandes {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idcommande", nullable = false)
+    private Commandes commande;
+
+    @Column(name = "datefacture", nullable = false)
+    private LocalDate dateFacture;
+
+    @Column(name = "montanttotal", nullable = false, precision = 16, scale = 3)
+    private BigDecimal montantTotal;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/fournisseur/Fournisseurs.java
+======================================
+package com.gestion.restaurant.entity.fournisseur;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "fournisseurs")
+@Data
+@NoArgsConstructor
+public class Fournisseurs {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "typefournisseurs", nullable = false)
+    private TypeFournisseurs typeFournisseurs;
+
+    @Column(nullable = false, length = 50)
+    private String nom;
+
+    @Column(nullable = false, length = 50)
+    private String prenom;
+
+    @Column(nullable = false, length = 50)
+    private String contact;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/fournisseur/TypeFournisseurs.java
+======================================
+package com.gestion.restaurant.entity.fournisseur;
+
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "typefournisseurs")
+@Data
+@NoArgsConstructor
+public class TypeFournisseurs {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/ingredients/CategorieIngredients.java
+======================================
+package com.gestion.restaurant.entity.ingredients;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "categorieingredients")
+@Data
+@NoArgsConstructor
+public class CategorieIngredients {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/ingredients/EtatStockIngredient.java
+======================================
+package com.gestion.restaurant.entity.ingredients;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "etatstockingredient")
+@Data
+@NoArgsConstructor
+public class EtatStockIngredient {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idingredient", nullable = false)
+    private Ingredients ingredient;
+
+    @Column(name = "dateetatstock", nullable = false)
+    private LocalDate dateEtatStock;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/ingredients/HistoriqueIngredients.java
+======================================
+package com.gestion.restaurant.entity.ingredients;
+
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "historiqueingredients")
+@Data
+@NoArgsConstructor
+public class HistoriqueIngredients {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idingredient", nullable = false)
+    private Ingredients ingredient;
+
+    @Column(name = "dateentree", nullable = false)
+    private LocalDate dateEntree;
+
+    @Column(name = "dateperemption")
+    private LocalDate datePeremption;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
+
+    @Column(name = "prixachat", nullable = false, precision = 16, scale = 3)
+    private BigDecimal prixAchat;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/ingredients/Ingredients.java
+======================================
+package com.gestion.restaurant.entity.ingredients;
+import com.gestion.restaurant.entity.fournisseur.Fournisseurs;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "ingredients")
+@Data
+@NoArgsConstructor
+public class Ingredients {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 100)
+    private String nom;
+
+    @ManyToOne
+    @JoinColumn(name = "idcategorieingredients", nullable = false)
+    private CategorieIngredients categorieIngredients;
+
+    @ManyToOne
+    @JoinColumn(name = "idstatutingredient", nullable = false)
+    private StatutIngredient statutIngredient;
+
+    @ManyToOne
+    @JoinColumn(name = "idfournisseur", nullable = false)
+    private Fournisseurs fournisseur;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/ingredients/InventaireIngredient.java
+======================================
+package com.gestion.restaurant.entity.ingredients;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "inventaireingredient")
+@Data
+@NoArgsConstructor
+public class InventaireIngredient {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idingredient", nullable = false)
+    private Ingredients ingredient;
+
+    @Column(name = "dateinventaire", nullable = false)
+    private LocalDate dateInventaire;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
+
+    @ManyToOne
+    @JoinColumn(name = "typemvtingredient", nullable = false)
+    private TypeMvtIngredient typeMvtIngredient;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/ingredients/StatutIngredient.java
+======================================
+package com.gestion.restaurant.entity.ingredients;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "statutingredient")
+@Data
+@NoArgsConstructor
+public class StatutIngredient {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/ingredients/TypeMvtIngredient.java
+======================================
+package com.gestion.restaurant.entity.ingredients;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "typemvtingredient")
+@Data
+@NoArgsConstructor
+public class TypeMvtIngredient {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/livraisons/ZonesLivraison.java
+======================================
+package com.gestion.restaurant.entity.livraisons;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "zoneslivraison")
+@Data
+@NoArgsConstructor
+public class ZonesLivraison {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal min;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal max;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal prix;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/materielles/CategorieMaterielles.java
+======================================
+package com.gestion.restaurant.entity.materielles;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "categoriematerielles")
+@Data
+@NoArgsConstructor
+public class CategorieMaterielles {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/materielles/Materielles.java
+======================================
+package com.gestion.restaurant.entity.materielles;
+
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "materielles")
+@Data
+@NoArgsConstructor
+public class Materielles {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 100)
+    private String nom;
+
+    @Column(name = "dateentree", nullable = false)
+    private LocalDate dateEntree;
+
+    @ManyToOne
+    @JoinColumn(name = "idcategoriematerielles", nullable = false)
+    private CategorieMaterielles categorieMaterielles;
+
+    @ManyToOne
+    @JoinColumn(name = "idstatutmaterielles", nullable = false)
+    private StatutMaterielles statutMaterielles;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/materielles/StatutMaterielles.java
+======================================
+package com.gestion.restaurant.entity.materielles;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "statutmaterielles")
+@Data
+@NoArgsConstructor
+public class StatutMaterielles {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/personnels/FichePaie.java
+======================================
+package com.gestion.restaurant.entity.personnels;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "fichepaie")
+@Data
+@NoArgsConstructor
+public class FichePaie {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idpersonnels", nullable = false)
+    private Personnels personnel;
+
+    @Column(name = "datepaie", nullable = false)
+    private LocalDate datePaie;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal salaire;
+
+    @Column(name = "montanttotal", nullable = false, precision = 16, scale = 3)
+    private BigDecimal montantTotal;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/personnels/Personnels.java
+======================================
+package com.gestion.restaurant.entity.personnels;
+
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "personnels")
+@Data
+@NoArgsConstructor
+public class Personnels {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 50)
+    private String nom;
+
+    @Column(nullable = false, length = 50)
+    private String prenom;
+
+    @Column(nullable = false, length = 50)
+    private String contact;
+
+    @ManyToOne
+    @JoinColumn(name = "idrolepersonnels", nullable = false)
+    private RolePersonnels rolePersonnels;
+
+    @Column(name = "dateembauche", nullable = false)
+    private LocalDate dateEmbauche;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/personnels/RolePersonnels.java
+======================================
+package com.gestion.restaurant.entity.personnels;
+
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "rolepersonnels")
+@Data
+@NoArgsConstructor
+public class RolePersonnels {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/plats/CategoriePlats.java
+======================================
+package com.gestion.restaurant.entity.plats;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "categorieplats")
+@Data
+@NoArgsConstructor
+public class CategoriePlats {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/plats/Plats.java
+======================================
+package com.gestion.restaurant.entity.plats;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "plats")
+@Data
+@NoArgsConstructor
+public class Plats {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, length = 100)
+    private String nom;
+
+    @ManyToOne
+    @JoinColumn(name = "idcategorieplats", nullable = false)
+    private CategoriePlats categoriePlats;
+
+    @Column(name = "prixvente", nullable = false, precision = 16, scale = 3)
+    private BigDecimal prixVente;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/plats/RecettePlats.java
+======================================
+package com.gestion.restaurant.entity.plats;
+
+import com.gestion.restaurant.entity.ingredients.*;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "recetteplats")
+@Data
+@NoArgsConstructor
+public class RecettePlats {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idplat", nullable = false)
+    private Plats plat;
+
+    @ManyToOne
+    @JoinColumn(name = "idingredient", nullable = false)
+    private Ingredients ingredient;
+
+    @Column(name = "quantiterequise", nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantiteRequise;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/RestaurantApplication.java
+======================================
+package com.gestion.restaurant;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class RestaurantApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(RestaurantApplication.class, args);
+	}
+
+}
+
+
+======================================
+RESOURCE : src/main/resources/application.properties
+======================================
+spring.datasource.url=jdbc:postgresql://localhost:5432/restaurant
+spring.datasource.username=dev1
+spring.datasource.password=dev
+spring.datasource.driver-class-name=org.postgresql.Driver
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
