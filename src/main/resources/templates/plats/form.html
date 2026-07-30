@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Formulaire Plat</title>
+    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1 th:text="${plat.id == null ? 'Ajouter un Plat' : 'Modifier le Plat'}"></h1>
+            </header>
+            <section class="form-container">
+                <form th:action="@{/plats/save}" th:object="${plat}" method="post" class="custom-form">
+                    <input type="hidden" th:field="*{id}" />
+                    <div class="form-group">
+                        <label>Nom :</label>
+                        <input type="text" th:field="*{nom}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Catégorie :</label>
+                        <select th:field="*{categoriePlats}" class="form-control" required>
+                            <option value="">-- Sélectionner --</option>
+                            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Prix de Vente (Ar) :</label>
+                        <input type="number" step="0.01" th:field="*{prixVente}" required class="form-control" />
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">Enregistrer</button>
+                        <a th:href="@{/plats}" class="btn btn-secondary">Annuler</a>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

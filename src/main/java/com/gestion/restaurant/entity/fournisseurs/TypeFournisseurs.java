@@ -1,4 +1,4 @@
-package com.gestion.restaurant.entity.fournisseur;
+package com.gestion.restaurant.entity.fournisseurs;
 
 
 import jakarta.persistence.*;

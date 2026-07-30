@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulaire Client - Maman Tsara Nosy-Be</title>
+    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1 th:text="${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'}">Client</h1>
+            </header>
+
+            <section class="form-container">
+                <form th:action="@{/clients/save}" th:object="${client}" method="post" class="custom-form">
+                    <input type="hidden" th:field="*{id}" />
+
+                    <div class="form-group">
+                        <label for="nom">Nom :</label>
+                        <input type="text" id="nom" th:field="*{nom}" required class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prenom">Prénom :</label>
+                        <input type="text" id="prenom" th:field="*{prenom}" required class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contact">Contact :</label>
+                        <input type="text" id="contact" th:field="*{contact}" required class="form-control" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="typeClient">Type de Client :</label>
+                        <select id="typeClient" th:field="*{typeClient}" required class="form-control">
+                            <option value="">-- Sélectionner un type --</option>
+                            <option th:each="type : ${typesClient}" 
+                                    th:value="${type.id}" 
+                                    th:text="${type.libelle}">Type</option>
+                        </select>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">Enregistrer</button>
+                        <a th:href="@{/clients}" class="btn btn-secondary">Annuler</a>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+    <script th:src="@{/Design-template/Design/script.js}"></script>
+</body>
+</html>

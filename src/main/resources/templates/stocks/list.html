@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>État des Stocks</title>
+    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1>Mise à Jour / État du Stock</h1>
+                <a th:href="@{/stocks/new}" class="btn btn-primary">Ajuster le Stock</a>
+            </header>
+            <section class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Ingrédient</th><th>Date Relevé</th><th>Quantité restante</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="s : ${stocksList}">
+                            <td th:text="${s.id}">1</td>
+                            <td th:text="${s.ingredient != null ? s.ingredient.nom : 'N/A'}">Ingrédient</td>
+                            <td th:text="${s.dateEtatStock}">2026-07-30</td>
+                            <td th:text="${#numbers.formatDecimal(s.quantite, 1, 'POINT', 3, 'COMMA')}">10.000</td>
+                            <td class="actions">
+                                <a th:href="@{/stocks/edit/{id}(id=${s.id})}" class="btn btn-warning">Modifier</a>
+                                <a th:href="@{/stocks/delete/{id}(id=${s.id})}" class="btn btn-danger" onclick="return confirm('Effacer ce relevé de stock ?');">Supprimer</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Formulaire Ingrédient</title>
+    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1 th:text="${ingredient.id == null ? 'Ajouter un Ingrédient' : &quot;Modifier l'Ingrédient&quot;}">Ingrédient</h1>
+            </header>
+
+            <section class="form-container">
+                <form th:action="@{/ingredients/save}" th:object="${ingredient}" method="post" class="custom-form">
+                    <input type="hidden" th:field="*{id}" />
+
+                    <!-- Nom de l'ingrédient -->
+                    <div class="form-group">
+                        <label>Nom de l'ingrédient :</label>
+                        <input type="text" th:field="*{nom}" required class="form-control" />
+                    </div>
+
+                    <!-- Catégorie -->
+                    <div class="form-group">
+                        <label>Catégorie :</label>
+                        <select th:field="*{categorieIngredients}" class="form-control" required>
+                            <option value="">-- Sélectionner une catégorie --</option>
+                            <option th:each="cat : ${categories}" 
+                                    th:value="${cat.id}" 
+                                    th:text="${cat.libelle}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Statut -->
+                    <div class="form-group">
+                        <label>Statut :</label>
+                        <select th:field="*{statutIngredient}" class="form-control" required>
+                            <option value="">-- Sélectionner un statut --</option>
+                            <option th:each="st : ${statuts}" 
+                                    th:value="${st.id}" 
+                                    th:text="${st.libelle}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Fournisseur -->
+                    <div class="form-group">
+                        <label>Fournisseur :</label>
+                        <select th:field="*{fournisseur}" class="form-control" required>
+                            <option value="">-- Sélectionner un fournisseur --</option>
+                            <option th:each="f : ${fournisseurs}" 
+                                    th:value="${f.id}" 
+                                    th:text="${f.nom + ' ' + f.prenom}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">Enregistrer</button>
+                        <a th:href="@{/ingredients}" class="btn btn-secondary">Annuler</a>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

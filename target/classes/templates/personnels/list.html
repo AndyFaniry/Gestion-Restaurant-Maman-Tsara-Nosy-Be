@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Personnels - Maman Tsara Nosy-Be</title>
+    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1>Gestion du Personnel</h1>
+                <a th:href="@{/personnels/new}" class="btn btn-primary">Nouveau Employé</a>
+            </header>
+            <section class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Nom</th><th>Prénom</th><th>Contact</th><th>Rôle</th><th>Embauche</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="p : ${personnelsList}">
+                            <td th:text="${p.id}">1</td>
+                            <td th:text="${p.nom}">Nom</td>
+                            <td th:text="${p.prenom}">Prénom</td>
+                            <td th:text="${p.contact}">0320000000</td>
+                            <td th:text="${p.rolePersonnels != null ? p.rolePersonnels.libelle : 'N/A'}">Rôle</td>
+                            <td th:text="${p.dateEmbauche}">2024-01-01</td>
+                            <td class="actions">
+                                <a th:href="@{/personnels/edit/{id}(id=${p.id})}" class="btn btn-warning">Modifier</a>
+                                <a th:href="@{/personnels/delete/{id}(id=${p.id})}" class="btn btn-danger" onclick="return confirm('Supprimer cet employé ?');">Supprimer</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

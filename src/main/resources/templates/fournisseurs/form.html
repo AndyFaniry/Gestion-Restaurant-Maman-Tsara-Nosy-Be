@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Formulaire Fournisseur</title>
+    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1 th:text="${fournisseur.id == null ? 'Ajouter un Fournisseur' : 'Modifier le Fournisseur'}"></h1>
+            </header>
+            <section class="form-container">
+                <form th:action="@{/fournisseurs/save}" th:object="${fournisseur}" method="post" class="custom-form">
+                    <input type="hidden" th:field="*{id}" />
+                    <div class="form-group">
+                        <label>Nom :</label>
+                        <input type="text" th:field="*{nom}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Prénom :</label>
+                        <input type="text" th:field="*{prenom}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Contact :</label>
+                        <input type="text" th:field="*{contact}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Type :</label>
+                        <select th:field="*{typeFournisseurs}" class="form-control" required>
+                            <option value="">-- Sélectionner --</option>
+                            <option th:each="tf : ${typesFournisseur}" th:value="${tf.id}" th:text="${tf.libelle}"></option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">Enregistrer</button>
+                        <a th:href="@{/fournisseurs}" class="btn btn-secondary">Annuler</a>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

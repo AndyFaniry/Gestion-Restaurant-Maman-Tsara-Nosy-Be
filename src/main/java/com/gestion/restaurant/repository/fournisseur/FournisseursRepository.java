@@ -1,6 +1,6 @@
 package com.gestion.restaurant.repository.fournisseur;
 
-import com.gestion.restaurant.entity.fournisseur.Fournisseurs;
+import com.gestion.restaurant.entity.fournisseurs.Fournisseurs;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

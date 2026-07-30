@@ -15,7 +15,7 @@ TRUNCATE TABLE
     FichePaie,
     Personnels,
     RolePersonnels,
-    RecettePlats,
+    RecettePlats,*
     Plats,
     CategoriePlats,
     EtatStockIngredient,

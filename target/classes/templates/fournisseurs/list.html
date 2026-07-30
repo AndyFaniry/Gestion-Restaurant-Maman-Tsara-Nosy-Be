@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Fournisseurs - Maman Tsara Nosy-Be</title>
+    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1>Gestion des Fournisseurs</h1>
+                <a th:href="@{/fournisseurs/new}" class="btn btn-primary">Nouveau Fournisseur</a>
+            </header>
+            <section class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Nom</th><th>Prénom</th><th>Contact</th><th>Type</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="f : ${fournisseursList}">
+                            <td th:text="${f.id}">1</td>
+                            <td th:text="${f.nom}">Nom</td>
+                            <td th:text="${f.prenom}">Prénom</td>
+                            <td th:text="${f.contact}">0340000000</td>
+                            <td th:text="${f.typeFournisseurs != null ? f.typeFournisseurs.libelle : 'N/A'}">Type</td>
+                            <td class="actions">
+                                <a th:href="@{/fournisseurs/edit/{id}(id=${f.id})}" class="btn btn-warning">Modifier</a>
+                                <a th:href="@{/fournisseurs/delete/{id}(id=${f.id})}" class="btn btn-danger" onclick="return confirm('Confirmer la suppression ?');">Supprimer</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

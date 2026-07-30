@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ingrédients - Maman Tsara Nosy-Be</title>
+    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1>Gestion des Ingrédients</h1>
+                <a th:href="@{/ingredients/new}" class="btn btn-primary">Nouvel Ingrédient</a>
+            </header>
+            <section class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Nom</th><th>Catégorie</th><th>Statut</th><th>Fournisseur</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="ing : ${ingredientsList}">
+                            <td th:text="${ing.id}">1</td>
+                            <td th:text="${ing.nom}">Riz</td>
+                            <td th:text="${ing.categorieIngredients != null ? ing.categorieIngredients.libelle : 'N/A'}">Catégorie</td>
+                            <td th:text="${ing.statutIngredient != null ? ing.statutIngredient.libelle : 'N/A'}">Statut</td>
+                            <td th:text="${ing.fournisseur != null ? ing.fournisseur.nom : 'N/A'}">Fournisseur</td>
+                            <td class="actions">
+                                <a th:href="@{/ingredients/edit/{id}(id=${ing.id})}" class="btn btn-warning">Modifier</a>
+                                <a th:href="@{/ingredients/delete/{id}(id=${ing.id})}" class="btn btn-danger" onclick="return confirm('Supprimer cet ingrédient ?');">Supprimer</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
