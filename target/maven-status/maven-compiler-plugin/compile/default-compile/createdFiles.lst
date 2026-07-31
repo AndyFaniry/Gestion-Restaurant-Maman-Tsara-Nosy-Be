@@ -5,6 +5,7 @@ com/gestion/restaurant/entity/ingredients/StatutIngredient.class
 com/gestion/restaurant/repository/caisse/TypeMouvementCaisseRepository.class
 com/gestion/restaurant/entity/fournisseurs/Fournisseurs.class
 com/gestion/restaurant/repository/commandes/DetailsCommandesRepository.class
+com/gestion/restaurant/service/ingredients/UniteService.class
 com/gestion/restaurant/repository/materielles/MateriellesRepository.class
 com/gestion/restaurant/controller/plats/PlatsController.class
 com/gestion/restaurant/entity/ingredients/TypeMvtIngredient.class
