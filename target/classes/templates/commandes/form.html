@@ -2,77 +2,47 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulaire Commande - Maman Tsara Nosy-Be</title>
-    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+    <title>Formulaire Commande</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-
-<div class="app">
-
-    <!-- Sidebar globale avec l'onglet 'commandes' actif -->
-    <aside th:replace="~{fragments/layout :: sidebar('commandes')}"></aside>
-
-    <div class="main">
-        <!-- Topbar globale avec titre dynamique -->
-        <div th:replace="~{fragments/layout :: topbar(${commande.id == null ? 'Créer une Commande' : 'Modifier la Commande'})}"></div>
-
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h2 th:text="${commande.id == null ? 'Créer une Commande' : 'Modifier la Commande'}">Commande</h2>
-                    <div class="breadcrumb">Accueil / Commandes / <span th:text="${commande.id == null ? 'Nouvelle' : 'Édition'}">Formulaire</span></div>
-                </div>
-                <a th:href="@{/commandes}" class="btn btn-secondary btn-sm">Retour aux commandes</a>
-            </div>
-
-            <div class="card">
-                <section class="form-container">
-                    <form th:action="@{/commandes/save}" th:object="${commande}" method="post" class="custom-form">
-                        <input type="hidden" th:field="*{id}" />
-
-                        <div class="form-group">
-                            <label for="client">Client :</label>
-                            <select id="client" th:field="*{client.id}" class="form-control" required>
-                                <option value="">-- Sélectionner un client --</option>
-                                <option th:each="cli : ${clients}" 
-                                        th:value="${cli.id}" 
-                                        th:text="${cli.nom + ' ' + cli.prenom}">Nom Prénom</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="dateCommande">Date Commande :</label>
-                            <input type="date" id="dateCommande" th:field="*{dateCommande}" required class="form-control" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="zoneLivraison">Zone de Livraison :</label>
-                            <select id="zoneLivraison" th:field="*{zoneLivraison.id}" class="form-control">
-                                <option value="">-- Aucune (Sur place) --</option>
-                                <option th:each="z : ${zones}" 
-                                        th:value="${z.id}" 
-                                        th:text="${z.libelle + ' (' + #numbers.formatDecimal(z.prix, 1, 'WHITESPACE', 0, 'POINT') + ' Ar)'}">Zone</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="montantTotal">Montant Total (Ar) :</label>
-                            <input type="number" id="montantTotal" step="0.01" min="0" th:field="*{montantTotal}" placeholder="0.00" required class="form-control" />
-                        </div>
-
-                        <div class="form-actions" style="margin-top: 20px;">
-                            <button type="submit" class="btn btn-primary">Enregistrer</button>
-                            <a th:href="@{/commandes}" class="btn btn-secondary">Annuler</a>
-                        </div>
-                    </form>
-                </section>
-            </div>
-        </div>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1 th:text="${commande.id == null ? 'Créer une Commande' : 'Modifier la Commande'}"></h1>
+            </header>
+            <section class="form-container">
+                <form th:action="@{/commandes/save}" th:object="${commande}" method="post" class="custom-form">
+                    <input type="hidden" th:field="*{id}" />
+                    <div class="form-group">
+                        <label>Client :</label>
+                        <select th:field="*{client}" class="form-control" required>
+                            <option value="">-- Sélectionner un client --</option>
+                            <option th:each="cli : ${clients}" th:value="${cli.id}" th:text="${cli.nom + ' ' + cli.prenom}"></option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date Commande :</label>
+                        <input type="date" th:field="*{dateCommande}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Zone de Livraison :</label>
+                        <select th:field="*{zoneLivraison}" class="form-control">
+                            <option value="">-- Aucune (Sur place) --</option>
+                            <option th:each="z : ${zones}" th:value="${z.id}" th:text="${z.libelle + ' (' + z.prix + ' Ar)'}"></option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Montant Total (Ar) :</label>
+                        <input type="number" step="0.01" th:field="*{montantTotal}" required class="form-control" />
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">Enregistrer</button>
+                        <a th:href="@{/commandes}" class="btn btn-secondary">Annuler</a>
+                    </div>
+                </form>
+            </section>
+        </main>
     </div>
-
-</div>
-
-<script th:src="@{/Design-template/Design/script.js}"></script>
 </body>
 </html>

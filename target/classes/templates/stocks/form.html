@@ -2,67 +2,40 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulaire Stock - Maman Tsara Nosy-Be</title>
-    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+    <title>Formulaire Stock</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-
-<div class="app">
-
-    <!-- Sidebar globale avec l'onglet 'stocks' actif -->
-    <aside th:replace="~{fragments/layout :: sidebar('stocks')}"></aside>
-
-    <div class="main">
-        <!-- Topbar globale avec titre dynamique -->
-        <div th:replace="~{fragments/layout :: topbar(${stock.id == null ? 'Relevé de Stock' : 'Modifier Relevé de Stock'})}"></div>
-
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h2 th:text="${stock.id == null ? 'Relevé de Stock' : 'Modifier Relevé de Stock'}">Relevé de Stock</h2>
-                    <div class="breadcrumb">Accueil / Stocks / <span th:text="${stock.id == null ? 'Nouveau' : 'Édition'}">Formulaire</span></div>
-                </div>
-                <a th:href="@{/stocks}" class="btn btn-secondary btn-sm">Retour à la liste</a>
-            </div>
-
-            <div class="card">
-                <section class="form-container">
-                    <form th:action="@{/stocks/save}" th:object="${stock}" method="post" class="custom-form">
-                        <input type="hidden" th:field="*{id}" />
-
-                        <div class="form-group">
-                            <label for="ingredient">Ingrédient :</label>
-                            <select id="ingredient" th:field="*{ingredient.id}" class="form-control" required>
-                                <option value="">-- Sélectionner un ingrédient --</option>
-                                <option th:each="ing : ${ingredients}" 
-                                        th:value="${ing.id}" 
-                                        th:text="${ing.nom}">Ingrédient</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="dateEtatStock">Date Relevé :</label>
-                            <input type="date" id="dateEtatStock" th:field="*{dateEtatStock}" required class="form-control" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="quantite">Quantité :</label>
-                            <input type="number" id="quantite" step="0.001" min="0" th:field="*{quantite}" placeholder="0.000" required class="form-control" />
-                        </div>
-
-                        <div class="form-actions" style="margin-top: 20px;">
-                            <button type="submit" class="btn btn-primary">Enregistrer</button>
-                            <a th:href="@{/stocks}" class="btn btn-secondary">Annuler</a>
-                        </div>
-                    </form>
-                </section>
-            </div>
-        </div>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1 th:text="${stock.id == null ? 'Relevé de Stock' : 'Modifier Relevé de Stock'}"></h1>
+            </header>
+            <section class="form-container">
+                <form th:action="@{/stocks/save}" th:object="${stock}" method="post" class="custom-form">
+                    <input type="hidden" th:field="*{id}" />
+                    <div class="form-group">
+                        <label>Ingrédient :</label>
+                        <select th:field="*{ingredient}" class="form-control" required>
+                            <option value="">-- Sélectionner un ingrédient --</option>
+                            <option th:each="ing : ${ingredients}" th:value="${ing.id}" th:text="${ing.nom}"></option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date Relevé :</label>
+                        <input type="date" th:field="*{dateEtatStock}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Quantité :</label>
+                        <input type="number" step="0.001" th:field="*{quantite}" required class="form-control" />
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">Enregistrer</button>
+                        <a th:href="@{/stocks}" class="btn btn-secondary">Annuler</a>
+                    </div>
+                </form>
+            </section>
+        </main>
     </div>
-
-</div>
-
-<script th:src="@{/Design-template/Design/script.js}"></script>
 </body>
 </html>

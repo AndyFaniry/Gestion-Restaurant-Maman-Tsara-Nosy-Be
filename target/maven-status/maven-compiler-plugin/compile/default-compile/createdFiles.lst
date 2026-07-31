@@ -23,7 +23,9 @@ com/gestion/restaurant/entity/livraisons/ZonesLivraison.class
 com/gestion/restaurant/repository/caisse/MouvementCaisseRepository.class
 com/gestion/restaurant/repository/personnels/PersonnelsRepository.class
 com/gestion/restaurant/entity/materielles/CategorieMaterielles.class
+com/gestion/restaurant/controller/dashboard/DashboardController.class
 com/gestion/restaurant/repository/clients/ClientsRepository.class
+com/gestion/restaurant/entity/ingredients/Unite.class
 com/gestion/restaurant/entity/plats/CategoriePlats.class
 com/gestion/restaurant/entity/caisse/MouvementCaisse.class
 com/gestion/restaurant/repository/personnels/FichePaieRepository.class
@@ -52,6 +54,7 @@ com/gestion/restaurant/entity/materielles/Materielles.class
 com/gestion/restaurant/controller/caisse/CaisseController.class
 com/gestion/restaurant/entity/personnels/Personnels.class
 com/gestion/restaurant/entity/ingredients/CategorieIngredients.class
+com/gestion/restaurant/repository/ingredients/UniteRepository.class
 com/gestion/restaurant/entity/ingredients/EtatStockIngredient.class
 com/gestion/restaurant/repository/fournisseur/TypeFournisseursRepository.class
 com/gestion/restaurant/entity/commandes/DetailsCommandes.class

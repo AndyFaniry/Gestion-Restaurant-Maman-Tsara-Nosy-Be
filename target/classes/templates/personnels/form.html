@@ -2,77 +2,48 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulaire Personnel - Maman Tsara Nosy-Be</title>
-    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+    <title>Formulaire Personnel</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-
-<div class="app">
-
-    <!-- Sidebar globale avec l'onglet 'personnels' actif -->
-    <aside th:replace="~{fragments/layout :: sidebar('personnels')}"></aside>
-
-    <div class="main">
-        <!-- Topbar globale avec titre dynamique -->
-        <div th:replace="~{fragments/layout :: topbar(${personnel.id == null ? 'Ajouter un Employé' : 'Modifier l\'Employé'})}"></div>
-
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h2 th:text="${personnel.id == null ? 'Ajouter un Employé' : 'Modifier l\'Employé'}">Employé</h2>
-                    <div class="breadcrumb">Accueil / Personnel / <span th:text="${personnel.id == null ? 'Nouveau' : 'Édition'}">Formulaire</span></div>
-                </div>
-                <a th:href="@{/personnels}" class="btn btn-secondary btn-sm">Retour à la liste</a>
-            </div>
-
-            <div class="card">
-                <section class="form-container">
-                    <form th:action="@{/personnels/save}" th:object="${personnel}" method="post" class="custom-form">
-                        <input type="hidden" th:field="*{id}" />
-
-                        <div class="form-group">
-                            <label for="nom">Nom :</label>
-                            <input type="text" id="nom" th:field="*{nom}" placeholder="Entrez le nom" required class="form-control" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="prenom">Prénom :</label>
-                            <input type="text" id="prenom" th:field="*{prenom}" placeholder="Entrez le prénom" required class="form-control" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="contact">Contact :</label>
-                            <input type="text" id="contact" th:field="*{contact}" placeholder="Téléphone ou email" required class="form-control" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="rolePersonnels">Rôle :</label>
-                            <select id="rolePersonnels" th:field="*{rolePersonnels.id}" class="form-control" required>
-                                <option value="">-- Sélectionner --</option>
-                                <option th:each="r : ${roles}" 
-                                        th:value="${r.id}" 
-                                        th:text="${r.libelle}">Rôle</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="dateEmbauche">Date d'embauche :</label>
-                            <input type="date" id="dateEmbauche" th:field="*{dateEmbauche}" required class="form-control" />
-                        </div>
-
-                        <div class="form-actions" style="margin-top: 20px;">
-                            <button type="submit" class="btn btn-primary">Enregistrer</button>
-                            <a th:href="@{/personnels}" class="btn btn-secondary">Annuler</a>
-                        </div>
-                    </form>
-                </section>
-            </div>
-        </div>
+    <div class="dashboard-container">
+        <main class="content">
+            <header class="header">
+                <h1 th:text="${personnel.id == null ? 'Ajouter un Employé' : 'Modifier l''Employé'}"></h1>
+            </header>
+            <section class="form-container">
+                <form th:action="@{/personnels/save}" th:object="${personnel}" method="post" class="custom-form">
+                    <input type="hidden" th:field="*{id}" />
+                    <div class="form-group">
+                        <label>Nom :</label>
+                        <input type="text" th:field="*{nom}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Prénom :</label>
+                        <input type="text" th:field="*{prenom}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Contact :</label>
+                        <input type="text" th:field="*{contact}" required class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Rôle :</label>
+                        <select th:field="*{rolePersonnels}" class="form-control" required>
+                            <option value="">-- Sélectionner --</option>
+                            <option th:each="r : ${roles}" th:value="${r.id}" th:text="${r.libelle}"></option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date d'embauche :</label>
+                        <input type="date" th:field="*{dateEmbauche}" required class="form-control" />
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">Enregistrer</button>
+                        <a th:href="@{/personnels}" class="btn btn-secondary">Annuler</a>
+                    </div>
+                </form>
+            </section>
+        </main>
     </div>
-
-</div>
-
-<script th:src="@{/Design-template/Design/script.js}"></script>
 </body>
 </html>
