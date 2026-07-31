@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : ven. 31 juil. 2026 03:10:37 EAT
+Date : ven. 31 juil. 2026 10:38:35 EAT
 
 
 ======================================
@@ -296,6 +296,7 @@ FILE : src/main/java/com/gestion/restaurant/controller/ingredients/IngredientsCo
 package com.gestion.restaurant.controller.ingredients;
 
 import com.gestion.restaurant.entity.ingredients.Ingredients;
+import com.gestion.restaurant.repository.ingredients.UniteRepository;
 import com.gestion.restaurant.repository.fournisseur.FournisseursRepository;
 import com.gestion.restaurant.repository.ingredients.CategorieIngredientsRepository;
 import com.gestion.restaurant.repository.ingredients.IngredientsRepository;
@@ -312,15 +313,18 @@ public class IngredientsController {
     private final CategorieIngredientsRepository categorieRepo;
     private final StatutIngredientRepository statutRepo;
     private final FournisseursRepository fournisseurRepo;
+    private final UniteRepository uniteRepo;
 
     public IngredientsController(IngredientsRepository ingredientsRepository, 
                                  CategorieIngredientsRepository categorieRepo, 
                                  StatutIngredientRepository statutRepo, 
-                                 FournisseursRepository fournisseurRepo) {
+                                 FournisseursRepository fournisseurRepo, 
+                                 UniteRepository uniteRepo) {
         this.ingredientsRepository = ingredientsRepository;
         this.categorieRepo = categorieRepo;
         this.statutRepo = statutRepo;
         this.fournisseurRepo = fournisseurRepo;
+        this.uniteRepo = uniteRepo;
     }
 
     @GetMapping
@@ -335,6 +339,7 @@ public class IngredientsController {
         model.addAttribute("categories", categorieRepo.findAll());
         model.addAttribute("statuts", statutRepo.findAll());
         model.addAttribute("fournisseurs", fournisseurRepo.findAll());
+        model.addAttribute("unites", uniteRepo.findAll());
         return "ingredients/form";
     }
 
@@ -352,6 +357,7 @@ public class IngredientsController {
         model.addAttribute("categories", categorieRepo.findAll());
         model.addAttribute("statuts", statutRepo.findAll());
         model.addAttribute("fournisseurs", fournisseurRepo.findAll());
+        model.addAttribute("unites", uniteRepo.findAll());
         return "ingredients/form";
     }
 
@@ -909,6 +915,7 @@ public class HistoriqueIngredients {
 FILE : src/main/java/com/gestion/restaurant/entity/ingredients/Ingredients.java
 ======================================
 package com.gestion.restaurant.entity.ingredients;
+
 import com.gestion.restaurant.entity.fournisseurs.Fournisseurs;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -937,6 +944,10 @@ public class Ingredients {
     @ManyToOne
     @JoinColumn(name = "idfournisseur", nullable = false)
     private Fournisseurs fournisseur;
+
+    @ManyToOne
+    @JoinColumn(name = "idunite", nullable = false)
+    private Unite unite;
 }
 
 
@@ -1019,6 +1030,33 @@ public class TypeMvtIngredient {
 
     @Column(nullable = false, unique = true, length = 50)
     private String libelle;
+}
+
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/ingredients/Unite.java
+======================================
+package com.gestion.restaurant.entity.ingredients;
+
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "unite")
+@Data
+@NoArgsConstructor
+public class Unite {
+@Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String nom; // ex: "Gramme", "Litre", "Pièce"
+
+    @Column(length = 10)
+    private String symbole; // ex: "g", "L", "pcs"<
 }
 
 
@@ -1544,6 +1582,19 @@ import org.springframework.stereotype.Repository;
 public interface TypeMvtIngredientRepository extends JpaRepository<TypeMvtIngredient, Long> {
 }
 
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/repository/ingredients/UniteRepository.java
+======================================
+package com.gestion.restaurant.repository.ingredients;
+
+import com.gestion.restaurant.entity.ingredients.Unite;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UniteRepository extends JpaRepository<Unite, Long> {
+}
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/livraisons/ZonesLivraisonRepository.java
