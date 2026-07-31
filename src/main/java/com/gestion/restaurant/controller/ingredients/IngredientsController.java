@@ -1,6 +1,7 @@
 package com.gestion.restaurant.controller.ingredients;
 
 import com.gestion.restaurant.entity.ingredients.Ingredients;
+import com.gestion.restaurant.repository.ingredients.UniteRepository;
 import com.gestion.restaurant.repository.fournisseur.FournisseursRepository;
 import com.gestion.restaurant.repository.ingredients.CategorieIngredientsRepository;
 import com.gestion.restaurant.repository.ingredients.IngredientsRepository;
@@ -17,15 +18,18 @@ public class IngredientsController {
     private final CategorieIngredientsRepository categorieRepo;
     private final StatutIngredientRepository statutRepo;
     private final FournisseursRepository fournisseurRepo;
+    private final UniteRepository uniteRepo;
 
     public IngredientsController(IngredientsRepository ingredientsRepository, 
                                  CategorieIngredientsRepository categorieRepo, 
                                  StatutIngredientRepository statutRepo, 
-                                 FournisseursRepository fournisseurRepo) {
+                                 FournisseursRepository fournisseurRepo, 
+                                 UniteRepository uniteRepo) {
         this.ingredientsRepository = ingredientsRepository;
         this.categorieRepo = categorieRepo;
         this.statutRepo = statutRepo;
         this.fournisseurRepo = fournisseurRepo;
+        this.uniteRepo = uniteRepo;
     }
 
     @GetMapping
@@ -40,6 +44,7 @@ public class IngredientsController {
         model.addAttribute("categories", categorieRepo.findAll());
         model.addAttribute("statuts", statutRepo.findAll());
         model.addAttribute("fournisseurs", fournisseurRepo.findAll());
+        model.addAttribute("unites", uniteRepo.findAll());
         return "ingredients/form";
     }
 
@@ -57,6 +62,7 @@ public class IngredientsController {
         model.addAttribute("categories", categorieRepo.findAll());
         model.addAttribute("statuts", statutRepo.findAll());
         model.addAttribute("fournisseurs", fournisseurRepo.findAll());
+        model.addAttribute("unites", uniteRepo.findAll());
         return "ingredients/form";
     }
 

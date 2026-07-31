@@ -1,51 +1,61 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Clients - Maman Tsara Nosy-Be</title>
-    <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
+  <meta charset="UTF-8" />
+  <title>Gestion des Clients — Maman Tsara</title>
+  <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}" />
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- Sidebar & Navigation intégrées du Design-template -->
-        <main class="content">
-            <header class="header">
-                <h1>Liste des Clients</h1>
-                <a th:href="@{/clients/new}" class="btn btn-primary">Ajouter un client</a>
-            </header>
 
-            <section class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nom</th>
-                            <th>Prénom</th>
-                            <th>Contact</th>
-                            <th>Type Client</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="client : ${clientsList}">
-                            <td th:text="${client.id}">1</td>
-                            <td th:text="${client.nom}">Rasoa</td>
-                            <td th:text="${client.prenom}">Marie</td>
-                            <td th:text="${client.contact}">0340011122</td>
-                            <td th:text="${client.typeClient != null ? client.typeClient.libelle : 'N/A'}">VIP</td>
-                            <td class="actions">
-                                <a th:href="@{/clients/edit/{id}(id=${client.id})}" class="btn btn-warning">Modifier</a>
-                                <a th:href="@{/clients/delete/{id}(id=${client.id})}" 
-                                   class="btn btn-danger" 
-                                   onclick="return confirm('Voulez-vous supprimer ce client ?');">Supprimer</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-        </main>
+<div class="app">
+
+  <!-- Sidebar réutilisée avec l'onglet active 'clients' -->
+  <aside th:replace="~{fragments/layout :: sidebar('clients')}"></aside>
+
+  <div class="main">
+    <!-- Topbar réutilisée -->
+    <div th:replace="~{fragments/layout :: topbar('Liste des Clients')}"></div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Clients</h2>
+          <div class="breadcrumb">Accueil / <span>Clients</span></div>
+        </div>
+        <a th:href="@{/clients/new}" class="btn btn-primary btn-sm">+ Nouveau Client</a>
+      </div>
+
+      <div class="card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nom</th>
+              <th>Prénom</th>
+              <th>Contact</th>
+              <th>Type</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="client : ${clientsList}">
+              <td th:text="${client.id}">1</td>
+              <td th:text="${client.nom}">Nom</td>
+              <td th:text="${client.prenom}">Prénom</td>
+              <td th:text="${client.contact}">Contact</td>
+              <td th:text="${client.typeClient != null ? client.typeClient.libelle : '-'}">Type</td>
+              <td>
+                <a th:href="@{/clients/edit/{id}(id=${client.id})}" class="btn btn-sm btn-secondary">Modifier</a>
+                <a th:href="@{/clients/delete/{id}(id=${client.id})}" class="btn btn-sm btn-danger">Supprimer</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
-    <script th:src="@{/Design-template/Design/script.js}"></script>
+  </div>
+</div>
+
 </body>
 </html>

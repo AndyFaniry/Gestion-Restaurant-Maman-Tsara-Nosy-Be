@@ -2,38 +2,65 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plats - Maman Tsara Nosy-Be</title>
     <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
 </head>
 <body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1>Carte des Plats</h1>
-                <a th:href="@{/plats/new}" class="btn btn-primary">Nouveau Plat</a>
-            </header>
-            <section class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th><th>Nom</th><th>Catégorie</th><th>Prix de vente (Ar)</th><th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="p : ${platsList}">
-                            <td th:text="${p.id}">1</td>
-                            <td th:text="${p.nom}">Plat</td>
-                            <td th:text="${p.categoriePlats != null ? p.categoriePlats.libelle : 'N/A'}">Catégorie</td>
-                            <td th:text="${#numbers.formatDecimal(p.prixVente, 1, 'POINT', 2, 'COMMA')}">35000.00</td>
-                            <td class="actions">
-                                <a th:href="@{/plats/edit/{id}(id=${p.id})}" class="btn btn-warning">Modifier</a>
-                                <a th:href="@{/plats/delete/{id}(id=${p.id})}" class="btn btn-danger" onclick="return confirm('Supprimer ce plat ?');">Supprimer</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-        </main>
+
+<div class="app">
+
+    <!-- Sidebar globale avec l'onglet 'plats' actif -->
+    <aside th:replace="~{fragments/layout :: sidebar('plats')}"></aside>
+
+    <div class="main">
+        <!-- Topbar globale -->
+        <div th:replace="~{fragments/layout :: topbar('Carte des Plats')}"></div>
+
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h2>Carte des Plats</h2>
+                    <div class="breadcrumb">Accueil / <span>Plats</span></div>
+                </div>
+                <a th:href="@{/plats/new}" class="btn btn-primary btn-sm">+ Nouveau Plat</a>
+            </div>
+
+            <div class="card">
+                <section class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom</th>
+                                <th>Catégorie</th>
+                                <th>Prix de vente (Ar)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="p : ${platsList}">
+                                <td th:text="${p.id}">1</td>
+                                <td th:text="${p.nom}">Plat</td>
+                                <td th:text="${p.categoriePlats != null ? p.categoriePlats.libelle : 'N/A'}">Catégorie</td>
+                                <td th:text="${#numbers.formatDecimal(p.prixVente, 1, 'WHITESPACE', 2, 'POINT')} + ' Ar'">35 000.00 Ar</td>
+                                <td class="actions">
+                                    <a th:href="@{/plats/edit/{id}(id=${p.id})}" class="btn btn-sm btn-secondary">Modifier</a>
+                                    <a th:href="@{/plats/delete/{id}(id=${p.id})}" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ce plat ?');">Supprimer</a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(platsList)}">
+                                <td colspan="5" style="text-align: center; color: #888;">Aucun plat enregistré pour le moment.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </div>
     </div>
+
+</div>
+
+<script th:src="@{/Design-template/Design/script.js}"></script>
 </body>
 </html>

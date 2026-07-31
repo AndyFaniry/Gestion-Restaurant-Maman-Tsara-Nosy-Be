@@ -2,39 +2,71 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ingrédients - Maman Tsara Nosy-Be</title>
     <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
 </head>
 <body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1>Gestion des Ingrédients</h1>
-                <a th:href="@{/ingredients/new}" class="btn btn-primary">Nouvel Ingrédient</a>
-            </header>
-            <section class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th><th>Nom</th><th>Catégorie</th><th>Statut</th><th>Fournisseur</th><th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="ing : ${ingredientsList}">
-                            <td th:text="${ing.id}">1</td>
-                            <td th:text="${ing.nom}">Riz</td>
-                            <td th:text="${ing.categorieIngredients != null ? ing.categorieIngredients.libelle : 'N/A'}">Catégorie</td>
-                            <td th:text="${ing.statutIngredient != null ? ing.statutIngredient.libelle : 'N/A'}">Statut</td>
-                            <td th:text="${ing.fournisseur != null ? ing.fournisseur.nom : 'N/A'}">Fournisseur</td>
-                            <td class="actions">
-                                <a th:href="@{/ingredients/edit/{id}(id=${ing.id})}" class="btn btn-warning">Modifier</a>
-                                <a th:href="@{/ingredients/delete/{id}(id=${ing.id})}" class="btn btn-danger" onclick="return confirm('Supprimer cet ingrédient ?');">Supprimer</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-        </main>
+
+<div class="app">
+
+    <!-- Sidebar globale avec l'onglet 'ingredients' actif -->
+    <aside th:replace="~{fragments/layout :: sidebar('ingredients')}"></aside>
+
+    <div class="main">
+        <!-- Topbar globale -->
+        <div th:replace="~{fragments/layout :: topbar('Gestion des Ingrédients')}"></div>
+
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h2>Gestion des Ingrédients</h2>
+                    <div class="breadcrumb">Accueil / <span>Ingrédients</span></div>
+                </div>
+                <a th:href="@{/ingredients/new}" class="btn btn-primary btn-sm">+ Nouvel Ingrédient</a>
+            </div>
+
+            <div class="card">
+                <section class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom</th>
+                                <th>Catégorie</th>
+                                <th>Statut</th>
+                                <th>Fournisseur</th>
+                                <th>Actions</th>
+                                 <th>Unite</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="ing : ${ingredientsList}">
+                                <td th:text="${ing.id}">1</td>
+                                <td th:text="${ing.nom}">Riz</td>
+                                <td th:text="${ing.categorieIngredients != null ? ing.categorieIngredients.libelle : 'N/A'}">Catégorie</td>
+                                <td th:text="${ing.statutIngredient != null ? ing.statutIngredient.libelle : 'N/A'}">Statut</td>
+                                <td th:text="${ing.fournisseur != null ? (ing.fournisseur.nom + ' ' + (ing.fournisseur.prenom != null ? ing.fournisseur.prenom : '')) : 'N/A'}">Fournisseur</td>
+                                <td class="actions">
+                                    <a th:href="@{/ingredients/edit/{id}(id=${ing.id})}" class="btn btn-sm btn-secondary">Modifier</a>
+                                    <a th:href="@{/ingredients/delete/{id}(id=${ing.id})}" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer cet ingrédient ?');">Supprimer</a>
+                                </td>
+                               
+                                <td th:text="${ing.unite?.symbole}"></td>
+
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(ingredientsList)}">
+                                <td colspan="6" style="text-align: center; color: #888;">Aucun ingrédient enregistré pour le moment.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </div>
     </div>
+
+</div>
+
+<script th:src="@{/Design-template/Design/script.js}"></script>
 </body>
 </html>

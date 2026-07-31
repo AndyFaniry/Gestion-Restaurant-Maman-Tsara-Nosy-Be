@@ -26,6 +26,14 @@ DELETE FROM zoneslivraison;
 DELETE FROM plats;
 DELETE FROM categorieplats;
 
+DELETE FROM unite;
+-- Insertion directe avec la valeur NULL pour le symbole
+INSERT INTO unite (nom, symbole) VALUES ('Kilogramme', 'kg');
+INSERT INTO unite (nom, symbole) VALUES ('Gramme', 'g');
+INSERT INTO unite (nom, symbole) VALUES ('Litre', 'L');
+INSERT INTO unite (nom, symbole) VALUES ('Pièce', NULL); -- Le symbole est NULL ici
+INSERT INTO unite (nom, symbole) VALUES ('Sachet', NULL);
+
 -- Types et références de base
 INSERT INTO typeclient (id, libelle) VALUES 
 (1, 'Passager'),
@@ -104,10 +112,10 @@ INSERT INTO personnels (id, nom, prenom, contact, idrolepersonnels, dateembauche
 (2, 'Bao', 'Soa', '0329988776', 2, '2024-03-01');
 
 -- Ingrédients
-INSERT INTO ingredients (id, nom, idcategorieingredients, idstatutingredient, idfournisseur) VALUES 
-(1, 'Camaron / Crevette Géante', 1, 1, 1),
-(2, 'Riz Parfumé', 4, 1, 2),
-(3, 'Lait de Coco', 2, 1, 2);
+INSERT INTO ingredients (id, nom, idcategorieingredients, idstatutingredient, idfournisseur,idUnite) VALUES 
+(1, 'Camaron / Crevette Géante', 1, 1, 1, 1),
+(2, 'Riz Parfumé', 4, 1, 2, 2),
+(3, 'Lait de Coco', 2, 1, 2, 3);
 
 -- Plats & Recettes
 INSERT INTO plats (id, nom, idcategorieplats, prixvente) VALUES 

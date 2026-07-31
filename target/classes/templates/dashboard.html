@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maman Tsara — Tableau de Bord</title>
+  <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}" />
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Inclusion de la Sidebar avec le menu actif "dashboard" -->
+  <aside th:replace="~{fragments/layout :: sidebar('dashboard')}"></aside>
+
+  <div class="main">
+    <!-- Inclusion de la Topbar avec le titre de la page -->
+    <div th:replace="~{fragments/layout :: topbar('Tableau de Bord')}"></div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Tableau de bord</h2>
+          <div class="breadcrumb">Accueil / <span>Tableau de bord</span></div>
+        </div>
+      </div>
+
+      <!-- KPIs Dashboard -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Total Commandes</div>
+            <div class="kpi-icon bg-blue">
+              <svg viewBox="0 0 24 24" width="18" height="18"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${totalCommandes}">0</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Clients Enregistrés</div>
+            <div class="kpi-icon bg-green">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${totalClients}">0</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Ingrédients Référencés</div>
+            <div class="kpi-icon bg-amber">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${totalIngredients}">0</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Effectif Personnel</div>
+            <div class="kpi-icon bg-green">
+              <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${totalPersonnels}">0</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

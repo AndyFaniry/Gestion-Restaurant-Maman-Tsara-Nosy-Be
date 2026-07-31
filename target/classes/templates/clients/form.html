@@ -7,49 +7,67 @@
     <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
 </head>
 <body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1 th:text="${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'}">Client</h1>
-            </header>
 
-            <section class="form-container">
-                <form th:action="@{/clients/save}" th:object="${client}" method="post" class="custom-form">
-                    <input type="hidden" th:field="*{id}" />
+<div class="app">
 
-                    <div class="form-group">
-                        <label for="nom">Nom :</label>
-                        <input type="text" id="nom" th:field="*{nom}" required class="form-control" />
-                    </div>
+    <!-- Sidebar globale avec l'onglet 'clients' actif -->
+    <aside th:replace="~{fragments/layout :: sidebar('clients')}"></aside>
 
-                    <div class="form-group">
-                        <label for="prenom">Prénom :</label>
-                        <input type="text" id="prenom" th:field="*{prenom}" required class="form-control" />
-                    </div>
+    <div class="main">
+        <!-- Topbar globale avec titre dynamique -->
+        <div th:replace="~{fragments/layout :: topbar(${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'})}"></div>
 
-                    <div class="form-group">
-                        <label for="contact">Contact :</label>
-                        <input type="text" id="contact" th:field="*{contact}" required class="form-control" />
-                    </div>
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h2 th:text="${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'}">Client</h2>
+                    <div class="breadcrumb">Accueil / Clients / <span th:text="${client.id == null ? 'Nouveau' : 'Édition'}">Formulaire</span></div>
+                </div>
+                <a th:href="@{/clients}" class="btn btn-secondary btn-sm">Retour à la liste</a>
+            </div>
 
-                    <div class="form-group">
-                        <label for="typeClient">Type de Client :</label>
-                        <select id="typeClient" th:field="*{typeClient}" required class="form-control">
-                            <option value="">-- Sélectionner un type --</option>
-                            <option th:each="type : ${typesClient}" 
-                                    th:value="${type.id}" 
-                                    th:text="${type.libelle}">Type</option>
-                        </select>
-                    </div>
+            <div class="card">
+                <section class="form-container">
+                    <form th:action="@{/clients/save}" th:object="${client}" method="post" class="custom-form">
+                        <input type="hidden" th:field="*{id}" />
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
-                        <a th:href="@{/clients}" class="btn btn-secondary">Annuler</a>
-                    </div>
-                </form>
-            </section>
-        </main>
+                        <div class="form-group">
+                            <label for="nom">Nom :</label>
+                            <input type="text" id="nom" th:field="*{nom}" required class="form-control" placeholder="Entrez le nom" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="prenom">Prénom :</label>
+                            <input type="text" id="prenom" th:field="*{prenom}" required class="form-control" placeholder="Entrez le prénom" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contact">Contact :</label>
+                            <input type="text" id="contact" th:field="*{contact}" required class="form-control" placeholder="Téléphone ou email" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="typeClient">Type de Client :</label>
+                            <select id="typeClient" th:field="*{typeClient.id}" required class="form-control">
+                                <option value="">-- Sélectionner un type --</option>
+                                <option th:each="type : ${typesClient}" 
+                                        th:value="${type.id}" 
+                                        th:text="${type.libelle}">Type</option>
+                            </select>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 20px;">
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            <a th:href="@{/clients}" class="btn btn-secondary">Annuler</a>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </div>
     </div>
-    <script th:src="@{/Design-template/Design/script.js}"></script>
+
+</div>
+
+<script th:src="@{/Design-template/Design/script.js}"></script>
 </body>
 </html>

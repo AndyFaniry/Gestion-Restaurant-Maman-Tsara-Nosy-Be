@@ -1,6 +1,11 @@
 -- Active: 1785442317642@@127.0.0.1@5432@restaurant
 \c restaurant;
 --modules ingredients et plats  et fournisseurs 
+CREATE TABLE Unite(
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(50) NOT NULL UNIQUE,
+    symbole VARCHAR(50)
+);
 CREATE TABLE TypeFournisseurs(
     id SERIAL PRIMARY KEY,
     libelle VARCHAR(50) NOT NULL UNIQUE
@@ -27,6 +32,8 @@ CREATE TABLE Ingredients(
     idCategorieIngredients INT NOT NULL,
     idStatutIngredient INT NOT NULL,
     idFournisseur INT NOT NULL,
+    idUnite INT NOT NULL,
+    Foreign Key (idUnite) REFERENCES Unite(id),
     Foreign Key (idCategorieIngredients) REFERENCES CategorieIngredients(id),
     Foreign KEY (idStatutIngredient) REFERENCES StatutIngredient(id),
     Foreign KEY (idFournisseur) REFERENCES Fournisseurs(id)

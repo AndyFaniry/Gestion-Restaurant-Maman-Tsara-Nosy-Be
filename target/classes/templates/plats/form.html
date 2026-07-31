@@ -2,40 +2,67 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Formulaire Plat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulaire Plat - Maman Tsara Nosy-Be</title>
     <link rel="stylesheet" th:href="@{/Design-template/Design/style.css}">
 </head>
 <body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1 th:text="${plat.id == null ? 'Ajouter un Plat' : 'Modifier le Plat'}"></h1>
-            </header>
-            <section class="form-container">
-                <form th:action="@{/plats/save}" th:object="${plat}" method="post" class="custom-form">
-                    <input type="hidden" th:field="*{id}" />
-                    <div class="form-group">
-                        <label>Nom :</label>
-                        <input type="text" th:field="*{nom}" required class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label>Catégorie :</label>
-                        <select th:field="*{categoriePlats}" class="form-control" required>
-                            <option value="">-- Sélectionner --</option>
-                            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Prix de Vente (Ar) :</label>
-                        <input type="number" step="0.01" th:field="*{prixVente}" required class="form-control" />
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
-                        <a th:href="@{/plats}" class="btn btn-secondary">Annuler</a>
-                    </div>
-                </form>
-            </section>
-        </main>
+
+<div class="app">
+
+    <!-- Sidebar globale avec l'onglet 'plats' actif -->
+    <aside th:replace="~{fragments/layout :: sidebar('plats')}"></aside>
+
+    <div class="main">
+        <!-- Topbar globale avec titre dynamique -->
+        <div th:replace="~{fragments/layout :: topbar(${plat.id == null ? 'Ajouter un Plat' : 'Modifier le Plat'})}"></div>
+
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h2 th:text="${plat.id == null ? 'Ajouter un Plat' : 'Modifier le Plat'}">Plat</h2>
+                    <div class="breadcrumb">Accueil / Plats / <span th:text="${plat.id == null ? 'Nouveau' : 'Édition'}">Formulaire</span></div>
+                </div>
+                <a th:href="@{/plats}" class="btn btn-secondary btn-sm">Retour à la liste</a>
+            </div>
+
+            <div class="card">
+                <section class="form-container">
+                    <form th:action="@{/plats/save}" th:object="${plat}" method="post" class="custom-form">
+                        <input type="hidden" th:field="*{id}" />
+
+                        <div class="form-group">
+                            <label for="nom">Nom du plat :</label>
+                            <input type="text" id="nom" th:field="*{nom}" placeholder="Entrez le nom du plat" required class="form-control" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="categoriePlats">Catégorie :</label>
+                            <select id="categoriePlats" th:field="*{categoriePlats.id}" class="form-control" required>
+                                <option value="">-- Sélectionner --</option>
+                                <option th:each="c : ${categories}" 
+                                        th:value="${c.id}" 
+                                        th:text="${c.libelle}">Catégorie</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="prixVente">Prix de Vente (Ar) :</label>
+                            <input type="number" id="prixVente" step="0.01" min="0" th:field="*{prixVente}" placeholder="0.00" required class="form-control" />
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 20px;">
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            <a th:href="@{/plats}" class="btn btn-secondary">Annuler</a>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </div>
     </div>
+
+</div>
+
+<script th:src="@{/Design-template/Design/script.js}"></script>
 </body>
 </html>

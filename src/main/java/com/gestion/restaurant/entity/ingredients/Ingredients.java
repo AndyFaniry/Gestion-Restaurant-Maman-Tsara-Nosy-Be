@@ -1,4 +1,5 @@
 package com.gestion.restaurant.entity.ingredients;
+
 import com.gestion.restaurant.entity.fournisseurs.Fournisseurs;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -27,4 +28,8 @@ public class Ingredients {
     @ManyToOne
     @JoinColumn(name = "idfournisseur", nullable = false)
     private Fournisseurs fournisseur;
+
+    @ManyToOne
+    @JoinColumn(name = "idunite", nullable = false)
+    private Unite unite;
 }
