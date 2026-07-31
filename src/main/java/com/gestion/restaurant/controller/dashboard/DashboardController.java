@@ -35,6 +35,6 @@ public class DashboardController {
         model.addAttribute("totalIngredients", ingredientsRepository.count());
         model.addAttribute("totalPersonnels", personnelsRepository.count());
 
-        return "dashboard";
+        return "dashboard/index";
     }
 }

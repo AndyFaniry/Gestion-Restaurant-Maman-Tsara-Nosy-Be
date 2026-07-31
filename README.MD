@@ -1,11 +1,16 @@
 + [X] initialiser base de données
 + [X] creera database.sql
 + [ ] logique metier tout dans Service meme Page et Views et Controller appel Service structure MVC tu commprends
++ [ ] donnée dans la base de donnée plus statique
++ [ ] utiliser graphe
 
 | module        | fonction                                                                                                                                                  | priorite      | description                       | etat    | duree estimer | temps ecouler |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------------------- | ------- | ------------- | ------------- |
 | Unite         | -convertisseur unité                                                                                                                                     | priorité     | l kg cm³ mm g et tout            | encours |               |               |
-| Fournisseur   | inserer fournisseur crud                                                                                                                                  | fonctionnele  |                                   |         |               |               |
+| Fournisseur   | inserer fournisseur crud                                                                                                                                  | fonctionnele  |                                   |         |               | ok            |
+| Materielles   |                                                                                                                                                           |               |                                   |         |               |               |
+|               |                                                                                                                                                           |               |                                   |         |               |               |
+|               |                                                                                                                                                           |               |                                   |         |               |               |
 | Ingredients   | Filter Ingredients par Categorie par StatutIngredients                                                                                                    | prioritaire   |                                   |         |               |               |
 |               | -on doit jetter les ingredients perimer EtatStok et InventaireIngredient<br />TypeMouvemenIngredient :: tSortie                                           | prioritaire   |                                   |         |               |               |
 |               | -ajouter les ingredients TypeMvtIngredients Entree et ajout dans EtatStokIngredients rz                                                                   | prioritaire   |                                   |         |               |               |

@@ -1,45 +1,64 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Formulaire Fournisseur</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:with="pageTitle=${fournisseur.id == null ? 'Nouveau Fournisseur' : 'Modifier Fournisseur'}">
+<head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
 <body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1 th:text="${fournisseur.id == null ? 'Ajouter un Fournisseur' : 'Modifier le Fournisseur'}"></h1>
-            </header>
-            <section class="form-container">
-                <form th:action="@{/fournisseurs/save}" th:object="${fournisseur}" method="post" class="custom-form">
-                    <input type="hidden" th:field="*{id}" />
-                    <div class="form-group">
-                        <label>Nom :</label>
-                        <input type="text" th:field="*{nom}" required class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label>Prénom :</label>
-                        <input type="text" th:field="*{prenom}" required class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label>Contact :</label>
-                        <input type="text" th:field="*{contact}" required class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label>Type :</label>
-                        <select th:field="*{typeFournisseurs}" class="form-control" required>
-                            <option value="">-- Sélectionner --</option>
-                            <option th:each="tf : ${typesFournisseur}" th:value="${tf.id}" th:text="${tf.libelle}"></option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
-                        <a th:href="@{/fournisseurs}" class="btn btn-secondary">Annuler</a>
-                    </div>
-                </form>
-            </section>
-        </main>
+
+<div class="app">
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='fournisseurs')}"></aside>
+
+  <div class="main">
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2 th:text="${fournisseur.id == null ? 'Ajouter un Fournisseur' : 'Modifier le Fournisseur'}"></h2>
+          <div class="breadcrumb">Accueil / <a th:href="@{/fournisseurs}">Fournisseurs</a> / <span>Formulaire</span></div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <form th:action="@{/fournisseurs/save}" th:object="${fournisseur}" method="post">
+          <input type="hidden" th:field="*{id}" />
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label">Nom <span class="required">*</span></label>
+              <input type="text" th:field="*{nom}" required />
+            </div>
+            <div class="field-group">
+              <label class="field-label">Prénom <span class="required">*</span></label>
+              <input type="text" th:field="*{prenom}" required />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label">Contact <span class="required">*</span></label>
+              <input type="text" th:field="*{contact}" required />
+            </div>
+            <div class="field-group">
+              <label class="field-label">Type de fournisseur <span class="required">*</span></label>
+              <select th:field="*{typeFournisseurs}" required>
+                <option value="">-- Sélectionner --</option>
+                <option th:each="tf : ${typesFournisseur}" th:value="${tf.id}" th:text="${tf.libelle}"></option>
+              </select>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <a th:href="@{/fournisseurs}" class="btn btn-secondary">Annuler</a>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
+
 </body>
 </html>

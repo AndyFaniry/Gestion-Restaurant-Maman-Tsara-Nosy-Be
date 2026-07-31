@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/head :: head(pageTitle='Tableau de bord')}"></head>
+<body>
+
+<div class="app">
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='dashboard')}"></aside>
+
+  <div class="main">
+    <div th:replace="~{layout/navbar :: topbar(pageTitle='Tableau de bord')}"></div>
+
+    <div class="content">
+
+      <div class="page-header">
+        <div>
+          <h2>Tableau de bord</h2>
+          <div class="breadcrumb">Accueil / <span>Tableau de bord</span></div>
+        </div>
+      </div>
+
+      <!-- KPIs Dynamiques alimentés par DashboardController -->
+      <div class="kpi-grid">
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Total Commandes</div>
+            <div class="kpi-icon bg-blue">
+              <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${totalCommandes}">0</div>
+          <div class="kpi-delta up">Commandes enregistrées</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Total Clients</div>
+            <div class="kpi-icon bg-green">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${totalClients}">0</div>
+          <div class="kpi-delta up">Clients inscrits</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Ingrédients</div>
+            <div class="kpi-icon bg-amber">
+              <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${totalIngredients}">0</div>
+          <div class="kpi-delta up">Références stock</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Personnels</div>
+            <div class="kpi-icon bg-red">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${totalPersonnels}">0</div>
+          <div class="kpi-delta up">Employés actifs</div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
+
+</body>
+</html>
