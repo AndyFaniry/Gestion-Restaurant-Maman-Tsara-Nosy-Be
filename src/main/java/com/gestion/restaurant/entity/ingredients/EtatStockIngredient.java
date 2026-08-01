@@ -1,4 +1,5 @@
 package com.gestion.restaurant.entity.ingredients;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,5 +23,11 @@ public class EtatStockIngredient {
     private LocalDate dateEtatStock;
 
     @Column(nullable = false, precision = 16, scale = 3)
-    private BigDecimal quantite;
+    private BigDecimal quantite = BigDecimal.ZERO;
+
+    public EtatStockIngredient(Ingredients ingredient, LocalDate dateEtatStock, BigDecimal quantite) {
+        this.ingredient = ingredient;
+        this.dateEtatStock = dateEtatStock;
+        this.quantite = quantite;
+    }
 }

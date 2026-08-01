@@ -61,8 +61,6 @@ public class MateriellesService {
         this.fournisseursService = fournisseursService;
     }
 
-    // ───────────────────────── Recherche Multicritère via DTO & Specification ─────────────────────────
-
     @Transactional(readOnly = true)
     public List<MaterielResponseDto> search(MaterielSearchCriteria criteria) {
         Specification<Materielles> spec = MateriellesSpecification.withFilters(criteria);
@@ -97,8 +95,6 @@ public class MateriellesService {
     public List<Fournisseurs> findAllFournisseurs() {
         return fournisseursService.findAll();
     }
-
-    // ───────────────────────── Sauvegarde / Modification ─────────────────────────
 
     @Transactional
     public MaterielResponseDto saveFromDto(MaterielRequestDto dto) {
@@ -136,8 +132,6 @@ public class MateriellesService {
         materiellesRepository.deleteById(id);
     }
 
-    // ───────────────────────── Stock & Historique ─────────────────────────
-
     @Transactional(readOnly = true)
     public BigDecimal getStockActuel(Long idMateriel) {
         return etatStockMateriellesRepository.findTopByMateriel_IdOrderByDateEtatStockDescIdDesc(idMateriel)
@@ -158,98 +152,9 @@ public class MateriellesService {
         return historiqueMateriellesRepository.findByMateriel_IdOrderByDateEntreeDesc(idMateriel);
     }
 
-    @Transactional
-    public HistoriqueMaterielles enregistrerAchat(Long idMateriel, LocalDate dateEntree,
-                                                   BigDecimal quantite, BigDecimal prixAchat,
-                                                   Long idFournisseur) {
-        Materielles materiel = findById(idMateriel);
-
-        if (quantite == null || quantite.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessRuleException("La quantité achetée doit être strictement supérieure à zéro.");
-        }
-        if (prixAchat == null || prixAchat.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Le prix d'achat doit être positif ou nul.");
-        }
-        LocalDate date = dateEntree != null ? dateEntree : LocalDate.now();
-
-        HistoriqueMaterielles historique = new HistoriqueMaterielles();
-        historique.setMateriel(materiel);
-        historique.setDateEntree(date);
-        historique.setQuantite(quantite);
-        historique.setPrixAchat(prixAchat);
-        if (idFournisseur != null) {
-            historique.setFournisseur(fournisseursService.findById(idFournisseur));
-        }
-        HistoriqueMaterielles enregistre = historiqueMateriellesRepository.save(historique);
-
-        enregistrerMouvement(materiel, MVT_ENTREE, quantite, date);
-
-        BigDecimal nouveauStock = getStockActuel(idMateriel).add(quantite);
-        enregistrerSnapshotStock(materiel, nouveauStock, date);
-
-        BigDecimal montantTotal = quantite.multiply(prixAchat);
-        if (montantTotal.compareTo(BigDecimal.ZERO) > 0) {
-            caisseService.enregistrerSortie(montantTotal, date);
-        }
-
-        return enregistre;
-    }
-
-    // ───────────────────────── Maintenance & Hors Service ─────────────────────────
-
     @Transactional(readOnly = true)
     public List<MaintenanceMaterielles> findMaintenances(Long idMateriel) {
         return maintenanceMateriellesRepository.findByMateriel_IdOrderByDateMaintenanceDesc(idMateriel);
-    }
-
-    @Transactional
-    public MaintenanceMaterielles enregistrerMaintenance(Long idMateriel, LocalDate dateMaintenance,
-                                                           String description, BigDecimal cout,
-                                                           String technicien) {
-        Materielles materiel = findById(idMateriel);
-
-        if (description == null || description.isBlank()) {
-            throw new BusinessRuleException("La description de la maintenance est obligatoire.");
-        }
-        if (cout == null || cout.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Le coût de la maintenance doit être positif ou nul.");
-        }
-        LocalDate date = dateMaintenance != null ? dateMaintenance : LocalDate.now();
-
-        MaintenanceMaterielles maintenance = new MaintenanceMaterielles();
-        maintenance.setMateriel(materiel);
-        maintenance.setDateMaintenance(date);
-        maintenance.setDescription(description);
-        maintenance.setCout(cout);
-        maintenance.setTechnicien(technicien);
-        MaintenanceMaterielles enregistre = maintenanceMateriellesRepository.save(maintenance);
-
-        materiel.setStatutMaterielles(findOrCreateStatut(STATUT_EN_MAINTENANCE));
-        materiellesRepository.save(materiel);
-
-        enregistrerMouvement(materiel, MVT_MAINTENANCE, BigDecimal.ONE, date);
-
-        if (cout.compareTo(BigDecimal.ZERO) > 0) {
-            caisseService.enregistrerSortie(cout, date);
-        }
-
-        return enregistre;
-    }
-
-    @Transactional
-    public Materielles mettreHorsService(Long idMateriel) {
-        Materielles materiel = findById(idMateriel);
-        LocalDate date = LocalDate.now();
-
-        BigDecimal stockActuel = getStockActuel(idMateriel);
-        BigDecimal quantiteSortie = stockActuel.compareTo(BigDecimal.ZERO) > 0 ? stockActuel : BigDecimal.ONE;
-
-        materiel.setStatutMaterielles(findOrCreateStatut(STATUT_HORS_SERVICE));
-        Materielles enregistre = materiellesRepository.save(materiel);
-
-        enregistrerMouvement(enregistre, MVT_HORS_SERVICE, quantiteSortie, date);
-
-        return enregistre;
     }
 
     @Transactional(readOnly = true)
@@ -257,30 +162,57 @@ public class MateriellesService {
         return inventairesMateriellesRepository.findByMateriel_IdOrderByDateInventaireDesc(idMateriel);
     }
 
-    private void enregistrerMouvement(Materielles materiel, String typeLibelle, BigDecimal quantite, LocalDate date) {
-        InventairesMaterielles mouvement = new InventairesMaterielles();
-        mouvement.setMateriel(materiel);
-        mouvement.setDateInventaire(date != null ? date : LocalDate.now());
-        mouvement.setQuantite(quantite);
-        mouvement.setTypeMvtMaterielles(findOrCreateTypeMvt(typeLibelle));
-        inventairesMateriellesRepository.save(mouvement);
+    @Transactional
+    public void enregistrerAchat(Long idMateriel, LocalDate dateEntree, BigDecimal quantite, BigDecimal prixAchat, Long idFournisseur) {
+        Materielles mat = findById(idMateriel);
+        
+        HistoriqueMaterielles histo = new HistoriqueMaterielles();
+        histo.setMateriel(mat);
+        histo.setDateEntree(dateEntree != null ? dateEntree : LocalDate.now());
+        histo.setQuantite(quantite);
+        histo.setPrixAchat(prixAchat);
+        if (idFournisseur != null) {
+            histo.setFournisseur(fournisseursService.findById(idFournisseur));
+        }
+        historiqueMateriellesRepository.save(histo);
+
+        // Mise à jour du stock
+        BigDecimal nouveauStock = getStockActuel(idMateriel).add(quantite);
+        enregistrerSnapshotStock(mat, nouveauStock, dateEntree);
+
+        // Sortie de caisse
+        BigDecimal montantTotal = quantite.multiply(prixAchat);
+        if (montantTotal.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(montantTotal, dateEntree);
+        }
     }
 
-    private StatutMaterielles findOrCreateStatut(String libelle) {
-        return statutMateriellesRepository.findByLibelle(libelle)
-                .orElseGet(() -> {
-                    StatutMaterielles s = new StatutMaterielles();
-                    s.setLibelle(libelle);
-                    return statutMateriellesRepository.save(s);
-                });
+    @Transactional
+    public void enregistrerMaintenance(Long idMateriel, LocalDate dateMaintenance, String description, BigDecimal cout, String technicien) {
+        Materielles mat = findById(idMateriel);
+
+        MaintenanceMaterielles maint = new MaintenanceMaterielles();
+        maint.setMateriel(mat);
+        maint.setDateMaintenance(dateMaintenance != null ? dateMaintenance : LocalDate.now());
+        maint.setDescription(description);
+        maint.setCout(cout);
+        maint.setTechnicien(technicien);
+        maintenanceMateriellesRepository.save(maint);
+
+        // Mise à jour du statut
+        statutMateriellesRepository.findByLibelle(STATUT_EN_MAINTENANCE)
+                .ifPresent(mat::setStatutMaterielles);
+
+        // Sortie de caisse pour frais de maintenance
+        if (cout != null && cout.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(cout, dateMaintenance);
+        }
     }
 
-    private TypeMvtMaterielles findOrCreateTypeMvt(String libelle) {
-        return typeMvtMateriellesRepository.findByLibelle(libelle)
-                .orElseGet(() -> {
-                    TypeMvtMaterielles t = new TypeMvtMaterielles();
-                    t.setLibelle(libelle);
-                    return typeMvtMateriellesRepository.save(t);
-                });
+    @Transactional
+    public void mettreHorsService(Long idMateriel) {
+        Materielles mat = findById(idMateriel);
+        statutMateriellesRepository.findByLibelle(STATUT_HORS_SERVICE)
+                .ifPresent(mat::setStatutMaterielles);
     }
 }

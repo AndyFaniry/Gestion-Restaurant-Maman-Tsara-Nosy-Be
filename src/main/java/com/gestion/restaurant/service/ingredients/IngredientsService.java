@@ -262,4 +262,9 @@ public class IngredientsService {
             })
             .collect(Collectors.toList());
 }
+
+    public Object findAll() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'findAll'");
+    }
 }

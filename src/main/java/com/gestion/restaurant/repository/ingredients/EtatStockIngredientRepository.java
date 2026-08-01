@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface EtatStockIngredientRepository extends JpaRepository<EtatStockIngredient, Long> {
     Optional<EtatStockIngredient> findTopByIngredient_IdOrderByDateEtatStockDescIdDesc(Long idIngredient);
+    Optional<EtatStockIngredient> findByIngredient_Id(Long idIngredient);
 }

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Détails de la Recette</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container my-4">
+        <a th:href="@{/plats}" class="btn btn-secondary mb-3">&larr; Retour à la liste des plats</a>
+
+        <div class="p-3 mb-4 bg-white rounded shadow-sm border">
+            <h2>Composition du plat : <span class="text-primary" th:text="${plat.nom}"></span></h2>
+            <p><strong>Prix de vente:</strong> <span th:text="${plat.prixVente + ' €'}"></span></p>
+        </div>
+
+        <!-- Message de confirmation -->
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+        <div class="row">
+            <!-- Formulaire d'ajout d'ingrédient -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">Ajouter un Ingrédient</div>
+                    <div class="card-body">
+                        <form th:action="@{/recettes/ajouter}" method="post" th:object="${nouvelIngredient}">
+                            <input type="hidden" th:field="*{idPlat}"/>
+                            <div class="mb-3">
+                                <label class="form-label">Ingrédient</label>
+                                <select class="form-select" th:field="*{idIngredient}" required>
+                                    <option value="">-- Choisir un ingrédient --</option>
+                                    <option th:each="i : ${ingredients}" 
+                                            th:value="${i.id}" 
+                                            th:text="${i.nom + ' (' + i.unite.symbole + ')'}">
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Quantité Requise</label>
+                                <input type="number" step="0.01" class="form-control" th:field="*{quantiteRequise}" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Ajouter à la recette</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des ingrédients composant la recette -->
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">Ingrédients dans la recette</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Ingrédient</th>
+                                    <th>Quantité Nécessaire</th>
+                                    <th>Unité</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="r : ${recettes}">
+                                    <td th:text="${r.ingredient.nom}"></td>
+                                    <td th:text="${r.quantiteRequise}"></td>
+                                    <td th:text="${r.ingredient.unite.symbole}"></td>
+                                    <td>
+                                        <form th:action="@{/recettes/supprimer/{id}(id=${r.id})}" method="post" onsubmit="return confirm('Retirer cet ingrédient ?');">
+                                            <input type="hidden" name="idPlat" th:value="${plat.id}"/>
+                                            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(recettes)}">
+                                    <td colspan="4" class="text-center text-muted">Aucun ingrédient associé à ce plat pour le moment.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

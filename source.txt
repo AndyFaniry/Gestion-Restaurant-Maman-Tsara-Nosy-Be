@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : dim. 02 août 2026 00:52:02 EAT
+Date : dim. 02 août 2026 01:59:46 EAT
 
 
 ======================================
@@ -295,6 +295,7 @@ import com.gestion.restaurant.dto.ingredients.IngredientRequestDto;
 import com.gestion.restaurant.dto.ingredients.IngredientResponseDto;
 import com.gestion.restaurant.dto.ingredients.IngredientSearchCriteria;
 import com.gestion.restaurant.dto.ingredients.IngredientStockDTO;
+import com.gestion.restaurant.entity.ingredients.Ingredients;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -339,15 +340,25 @@ public class IngredientsController {
         return "redirect:/ingredients/" + enregistre.getId() + "/detail";
     }
 
-    @GetMapping("/edit/{id}")
-    public String showEditForm(@PathVariable("id") Long id, Model model) {
-        model.addAttribute("ingredient", ingredientsService.findDtoById(id));
-        model.addAttribute("categories", ingredientsService.findAllCategories());
-        model.addAttribute("statuts", ingredientsService.findAllStatuts());
-        model.addAttribute("fournisseurs", ingredientsService.findAllFournisseurs());
-        model.addAttribute("unites", ingredientsService.findAllUnites());
-        return "ingredients/form";
-    }
+@GetMapping("/edit/{id}")
+public String showEditForm(@PathVariable("id") Long id, Model model) {
+    Ingredients entity = ingredientsService.findById(id);
+    
+    IngredientRequestDto dto = new IngredientRequestDto();
+    dto.setId(entity.getId());
+    dto.setNom(entity.getNom());
+    if (entity.getCategorieIngredients() != null) dto.setIdCategorie(entity.getCategorieIngredients().getId());
+    if (entity.getStatutIngredient() != null) dto.setIdStatut(entity.getStatutIngredient().getId());
+    if (entity.getFournisseur() != null) dto.setIdFournisseur(entity.getFournisseur().getId());
+    if (entity.getUnite() != null) dto.setIdUnite(entity.getUnite().getId());
+
+    model.addAttribute("ingredient", dto);
+    model.addAttribute("categories", ingredientsService.findAllCategories());
+    model.addAttribute("statuts", ingredientsService.findAllStatuts());
+    model.addAttribute("fournisseurs", ingredientsService.findAllFournisseurs());
+    model.addAttribute("unites", ingredientsService.findAllUnites());
+    return "ingredients/form";
+}
 
     @GetMapping("/delete/{id}")
     public String deleteIngredient(@PathVariable("id") Long id) {
@@ -675,6 +686,86 @@ public class PlatsController {
 }
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/controller/recette/RecetteController.java
+======================================
+package com.gestion.restaurant.controller.recette;
+
+import com.gestion.restaurant.dto.recette.RecetteRequestDto;
+import com.gestion.restaurant.service.ingredients.IngredientsService;
+import com.gestion.restaurant.service.plats.PlatsService;
+import com.gestion.restaurant.service.recette.RecetteService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+@Controller
+@RequestMapping("/recettes")
+public class RecetteController {
+
+    private final RecetteService recetteService;
+    private final PlatsService platsService;
+    private final IngredientsService ingredientsService;
+
+    public RecetteController(RecetteService recetteService,
+                             PlatsService platsService,
+                             IngredientsService ingredientsService) {
+        this.recetteService = recetteService;
+        this.platsService = platsService;
+        this.ingredientsService = ingredientsService;
+    }
+
+    @GetMapping("/plat/{idPlat}")
+    public String afficherRecettePlat(@PathVariable("idPlat") Long idPlat, Model model) {
+        model.addAttribute("plat", platsService.findById(idPlat));
+        model.addAttribute("recettes", recetteService.getIngredientsParPlat(idPlat));
+        model.addAttribute("ingredients", ingredientsService.findAll());
+        
+        RecetteRequestDto requestDto = new RecetteRequestDto();
+        requestDto.setIdPlat(idPlat);
+        model.addAttribute("nouvelIngredient", requestDto);
+
+        return "recettes/details";
+    }
+
+    @PostMapping("/ajouter")
+    public String ajouterIngredient(@ModelAttribute("nouvelIngredient") RecetteRequestDto dto,
+                                    RedirectAttributes redirectAttributes) {
+        recetteService.ajouterIngredientARecette(dto);
+        redirectAttributes.addFlashAttribute("success", "Ingrédient ajouté à la recette avec succès.");
+        return "redirect:/recettes/plat/" + dto.getIdPlat();
+    }
+
+    @PostMapping("/supprimer/{idRecette}")
+    public String supprimerIngredient(@PathVariable("idRecette") Long idRecette,
+                                      @RequestParam("idPlat") Long idPlat,
+                                      RedirectAttributes redirectAttributes) {
+        recetteService.supprimerIngredientDeRecette(idRecette);
+        redirectAttributes.addFlashAttribute("success", "Ingrédient retiré de la recette.");
+        return "redirect:/recettes/plat/" + idPlat;
+    }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/ingredients/AchatIngredientRequestDto.java
+======================================
+package com.gestion.restaurant.dto.ingredients;
+
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import lombok.Data;
+@Data
+public class AchatIngredientRequestDto {
+    private Long idIngredient;
+    private Double quantite;
+    private Double prixAchatUnitaire;
+    private LocalDate dateEntree;
+    private LocalDate datePeremption;
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/dto/ingredients/IngredientMapper.java
 ======================================
 package com.gestion.restaurant.dto.ingredients;
@@ -700,10 +791,12 @@ public class IngredientMapper {
         }
         if (entity.getFournisseur() != null) {
             dto.setFournisseurNom(entity.getFournisseur().getNom() + " " + entity.getFournisseur().getPrenom());
+            dto.setIdFournisseur(entity.getFournisseur().getId()); // Add this mapping
         }
         if (entity.getUnite() != null) {
             dto.setUniteNom(entity.getUnite().getNom());
             dto.setUniteSymbole(entity.getUnite().getSymbole());
+            dto.setIdUnite(entity.getUnite().getId());            // Add this mapping
         }
         return dto;
     }
@@ -742,8 +835,10 @@ public class IngredientResponseDto {
     private String statutLibelle;
     private Long idStatut;
     private String fournisseurNom;
+    private Long idFournisseur; //
     private String uniteNom;
     private String uniteSymbole;
+    private Long idUnite;//
 }
 
 ======================================
@@ -862,6 +957,34 @@ public class MaterielSearchCriteria {
     
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate dateEntreeFin;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/recette/RecetteRequestDto.java
+======================================
+package com.gestion.restaurant.dto.recette;
+
+import lombok.Data;
+
+@Data
+public class RecetteRequestDto {
+    private Long idPlat;
+    private Long idIngredient;
+    private Double quantiteRequise;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/unite/UniteConversionDto.java
+======================================
+package com.gestion.restaurant.dto.unite;
+
+import lombok.Data;
+
+@Data
+public class UniteConversionDto {
+    private String uniteSource;
+    private String uniteCible;
+    private Double quantite;
 }
 
 ======================================
@@ -1164,6 +1287,7 @@ public class CategorieIngredients {
 FILE : src/main/java/com/gestion/restaurant/entity/ingredients/EtatStockIngredient.java
 ======================================
 package com.gestion.restaurant.entity.ingredients;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -1187,9 +1311,14 @@ public class EtatStockIngredient {
     private LocalDate dateEtatStock;
 
     @Column(nullable = false, precision = 16, scale = 3)
-    private BigDecimal quantite;
-}
+    private BigDecimal quantite = BigDecimal.ZERO;
 
+    public EtatStockIngredient(Ingredients ingredient, LocalDate dateEtatStock, BigDecimal quantite) {
+        this.ingredient = ingredient;
+        this.dateEtatStock = dateEtatStock;
+        this.quantite = quantite;
+    }
+}
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/entity/ingredients/HistoriqueIngredients.java
@@ -2052,6 +2181,7 @@ import java.util.Optional;
 @Repository
 public interface EtatStockIngredientRepository extends JpaRepository<EtatStockIngredient, Long> {
     Optional<EtatStockIngredient> findTopByIngredient_IdOrderByDateEtatStockDescIdDesc(Long idIngredient);
+    Optional<EtatStockIngredient> findByIngredient_Id(Long idIngredient);
 }
 
 ======================================
@@ -2061,13 +2191,19 @@ package com.gestion.restaurant.repository.ingredients;
 
 import com.gestion.restaurant.entity.ingredients.HistoriqueIngredients;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
 public interface HistoriqueIngredientsRepository extends JpaRepository<HistoriqueIngredients, Long> {
     List<HistoriqueIngredients> findByIngredient_IdOrderByDateEntreeDesc(Long idIngredient);
+
+    @Query("SELECT h FROM HistoriqueIngredients h WHERE h.datePeremption IS NOT NULL AND h.datePeremption <= :date")
+    List<HistoriqueIngredients> findLotsPerimes(@Param("date") LocalDate date);
 }
 
 ======================================
@@ -2123,10 +2259,12 @@ import com.gestion.restaurant.entity.ingredients.TypeMvtIngredient;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface TypeMvtIngredientRepository extends JpaRepository<TypeMvtIngredient, Long> {
+    Optional<TypeMvtIngredient> findByLibelle(String libelle);
 }
-
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/ingredients/UniteRepository.java
@@ -2352,18 +2490,33 @@ public interface PlatsRepository extends JpaRepository<Plats, Long> {
 
 
 ======================================
-FILE : src/main/java/com/gestion/restaurant/repository/plats/RecettePlatsRepository.java
+FILE : src/main/java/com/gestion/restaurant/repository/recettes/RecettePlatsRepository.java
 ======================================
-package com.gestion.restaurant.repository.plats;
+package com.gestion.restaurant.repository.recettes;
+
+
 
 import com.gestion.restaurant.entity.plats.RecettePlats;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface RecettePlatsRepository extends JpaRepository<RecettePlats, Long> {
-}
 
+    // Récupérer tous les ingrédients composants la recette d'un plat spécifique
+    List<RecettePlats> findByPlatId(Long idPlat);
+
+    // Récupérer les recettes qui utilisent un ingrédient donné
+    List<RecettePlats> findByIngredientId(Long idIngredient);
+
+    // Supprimer tous les ingrédients associés à un plat
+    void deleteByPlatId(Long idPlat);
+
+    // Supprimer une entrée spécifique de recette par ingrédient
+    void deleteByIngredientId(Long idIngredient);
+}
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/RestaurantApplication.java
@@ -2774,57 +2927,126 @@ public class IngredientsService {
             })
             .collect(Collectors.toList());
 }
+
+    public Object findAll() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'findAll'");
+    }
 }
 
 ======================================
-FILE : src/main/java/com/gestion/restaurant/service/ingredients/UniteService.java
+FILE : src/main/java/com/gestion/restaurant/service/ingredients/StockIngredientService.java
 ======================================
 package com.gestion.restaurant.service.ingredients;
 
-import java.util.List;
-
+import com.gestion.restaurant.dto.ingredients.AchatIngredientRequestDto;
+import com.gestion.restaurant.entity.ingredients.*;
+import com.gestion.restaurant.repository.ingredients.*;
+import com.gestion.restaurant.service.caisse.CaisseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.gestion.restaurant.repository.ingredients.UniteRepository;
-import com.gestion.restaurant.entity.ingredients.Unite;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
-public class UniteService {
+public class StockIngredientService {
 
-    private final UniteRepository uniteRepository;
+    private final HistoriqueIngredientsRepository historiqueRepository;
+    private final EtatStockIngredientRepository etatStockRepository;
+    private final InventaireIngredientRepository inventaireRepository;
+    private final IngredientsRepository ingredientsRepository;
+    private final TypeMvtIngredientRepository typeMvtIngredientRepository;
+    private final CaisseService caisseService;
 
-    public UniteService(UniteRepository uniteRepository) {
-        this.uniteRepository = uniteRepository;
+    public StockIngredientService(HistoriqueIngredientsRepository historiqueRepository,
+                                  EtatStockIngredientRepository etatStockRepository,
+                                  InventaireIngredientRepository inventaireRepository,
+                                  IngredientsRepository ingredientsRepository,
+                                  TypeMvtIngredientRepository typeMvtIngredientRepository,
+                                  CaisseService caisseService) {
+        this.historiqueRepository = historiqueRepository;
+        this.etatStockRepository = etatStockRepository;
+        this.inventaireRepository = inventaireRepository;
+        this.ingredientsRepository = ingredientsRepository;
+        this.typeMvtIngredientRepository = typeMvtIngredientRepository;
+        this.caisseService = caisseService;
     }
 
-    @Transactional(readOnly = true)
-    public List<Unite> findAllSourceApprovisionnement() {
-        return uniteRepository.findAll();
-    }
-
+    /**
+     * 1. Enregistrer un achat d'ingrédient : Entrée en Stock + Mouvement Caisse (Sortie)
+     */
     @Transactional
-    public Unite saveUnite(Unite unite) {
-        if (unite == null) {
-            throw new IllegalArgumentException("L'unité ne peut pas être nulle");
+    public void enregistrerAchatIngredient(AchatIngredientRequestDto dto) {
+        Ingredients ingredient = ingredientsRepository.findById(dto.getIdIngredient())
+                .orElseThrow(() -> new IllegalArgumentException("Ingrédient introuvable ID: " + dto.getIdIngredient()));
+
+        // A. Enregistrement dans Historique (Lot d'entrée)
+        HistoriqueIngredients historique = new HistoriqueIngredients();
+        historique.setIngredient(ingredient);
+        historique.setQuantite(BigDecimal.valueOf(dto.getQuantite()));
+        historique.setPrixAchat(BigDecimal.valueOf(dto.getPrixAchatUnitaire()));
+        historique.setDateEntree(dto.getDateEntree() != null ? dto.getDateEntree() : LocalDate.now());
+        historique.setDatePeremption(dto.getDatePeremption());
+        historiqueRepository.save(historique);
+
+        // B. Mise à jour de l'État du Stock Global
+        EtatStockIngredient etatStock = etatStockRepository.findByIngredient_Id(ingredient.getId())
+                .orElse(new EtatStockIngredient(ingredient, LocalDate.now(), BigDecimal.ZERO));
+        
+        etatStock.setQuantite(etatStock.getQuantite().add(BigDecimal.valueOf(dto.getQuantite())));
+        etatStock.setDateEtatStock(LocalDate.now());
+        etatStockRepository.save(etatStock);
+
+        // C. Sortie d'argent en Caisse via le service dédié (Achat = Dépense)
+        BigDecimal montantTotal = BigDecimal.valueOf(dto.getQuantite()).multiply(BigDecimal.valueOf(dto.getPrixAchatUnitaire()));
+        caisseService.enregistrerSortie(montantTotal, LocalDate.now());
+    }
+
+    /**
+     * 2. Traitement automatique et purge des ingrédients périmés
+     */
+    @Transactional
+    public void traiterIngredientsPerimes() {
+        LocalDate aujourdhui = LocalDate.now();
+        List<HistoriqueIngredients> lotsPerimes = historiqueRepository.findLotsPerimes(aujourdhui);
+
+        TypeMvtIngredient typeSortiePerime = typeMvtIngredientRepository.findByLibelle("PERIME")
+                .orElseGet(() -> {
+                    TypeMvtIngredient t = new TypeMvtIngredient();
+                    t.setLibelle("PERIME");
+                    return typeMvtIngredientRepository.save(t);
+                });
+
+        for (HistoriqueIngredients lot : lotsPerimes) {
+            if (lot.getQuantite() != null && lot.getQuantite().compareTo(BigDecimal.ZERO) > 0) {
+                // A. Tracer le mouvement dans l'Inventaire
+                InventaireIngredient inventaire = new InventaireIngredient();
+                inventaire.setIngredient(lot.getIngredient());
+                inventaire.setDateInventaire(aujourdhui);
+                inventaire.setQuantite(lot.getQuantite());
+                inventaire.setTypeMvtIngredient(typeSortiePerime);
+                inventaireRepository.save(inventaire);
+
+                // B. Déduire du stock global
+                EtatStockIngredient stock = etatStockRepository.findByIngredient_Id(lot.getIngredient().getId())
+                        .orElse(null);
+                if (stock != null) {
+                    BigDecimal nouvelleQuantite = stock.getQuantite().subtract(lot.getQuantite());
+                    if (nouvelleQuantite.compareTo(BigDecimal.ZERO) < 0) {
+                        nouvelleQuantite = BigDecimal.ZERO;
+                    }
+                    stock.setQuantite(nouvelleQuantite);
+                    stock.setDateEtatStock(aujourdhui);
+                    etatStockRepository.save(stock);
+                }
+
+                // C. Marquer le lot comme consommé/purgé
+                lot.setQuantite(BigDecimal.ZERO);
+                historiqueRepository.save(lot);
+            }
         }
-        return uniteRepository.save(unite);
-    }
-
-    public static Double kgToG(double kg) {
-        return kg * 1000;
-    }
-
-    public static Double gToKg(double g) {
-        return g / 1000;
-    }
-
-    public static Double lToMl(double l) {
-        return l * 1000;
-    }
-
-    public static Double mlToL(double ml) {
-        return ml / 1000;
     }
 }
 
@@ -2894,8 +3116,6 @@ public class MateriellesService {
         this.fournisseursService = fournisseursService;
     }
 
-    // ───────────────────────── Recherche Multicritère via DTO & Specification ─────────────────────────
-
     @Transactional(readOnly = true)
     public List<MaterielResponseDto> search(MaterielSearchCriteria criteria) {
         Specification<Materielles> spec = MateriellesSpecification.withFilters(criteria);
@@ -2930,8 +3150,6 @@ public class MateriellesService {
     public List<Fournisseurs> findAllFournisseurs() {
         return fournisseursService.findAll();
     }
-
-    // ───────────────────────── Sauvegarde / Modification ─────────────────────────
 
     @Transactional
     public MaterielResponseDto saveFromDto(MaterielRequestDto dto) {
@@ -2969,8 +3187,6 @@ public class MateriellesService {
         materiellesRepository.deleteById(id);
     }
 
-    // ───────────────────────── Stock & Historique ─────────────────────────
-
     @Transactional(readOnly = true)
     public BigDecimal getStockActuel(Long idMateriel) {
         return etatStockMateriellesRepository.findTopByMateriel_IdOrderByDateEtatStockDescIdDesc(idMateriel)
@@ -2991,98 +3207,9 @@ public class MateriellesService {
         return historiqueMateriellesRepository.findByMateriel_IdOrderByDateEntreeDesc(idMateriel);
     }
 
-    @Transactional
-    public HistoriqueMaterielles enregistrerAchat(Long idMateriel, LocalDate dateEntree,
-                                                   BigDecimal quantite, BigDecimal prixAchat,
-                                                   Long idFournisseur) {
-        Materielles materiel = findById(idMateriel);
-
-        if (quantite == null || quantite.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessRuleException("La quantité achetée doit être strictement supérieure à zéro.");
-        }
-        if (prixAchat == null || prixAchat.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Le prix d'achat doit être positif ou nul.");
-        }
-        LocalDate date = dateEntree != null ? dateEntree : LocalDate.now();
-
-        HistoriqueMaterielles historique = new HistoriqueMaterielles();
-        historique.setMateriel(materiel);
-        historique.setDateEntree(date);
-        historique.setQuantite(quantite);
-        historique.setPrixAchat(prixAchat);
-        if (idFournisseur != null) {
-            historique.setFournisseur(fournisseursService.findById(idFournisseur));
-        }
-        HistoriqueMaterielles enregistre = historiqueMateriellesRepository.save(historique);
-
-        enregistrerMouvement(materiel, MVT_ENTREE, quantite, date);
-
-        BigDecimal nouveauStock = getStockActuel(idMateriel).add(quantite);
-        enregistrerSnapshotStock(materiel, nouveauStock, date);
-
-        BigDecimal montantTotal = quantite.multiply(prixAchat);
-        if (montantTotal.compareTo(BigDecimal.ZERO) > 0) {
-            caisseService.enregistrerSortie(montantTotal, date);
-        }
-
-        return enregistre;
-    }
-
-    // ───────────────────────── Maintenance & Hors Service ─────────────────────────
-
     @Transactional(readOnly = true)
     public List<MaintenanceMaterielles> findMaintenances(Long idMateriel) {
         return maintenanceMateriellesRepository.findByMateriel_IdOrderByDateMaintenanceDesc(idMateriel);
-    }
-
-    @Transactional
-    public MaintenanceMaterielles enregistrerMaintenance(Long idMateriel, LocalDate dateMaintenance,
-                                                           String description, BigDecimal cout,
-                                                           String technicien) {
-        Materielles materiel = findById(idMateriel);
-
-        if (description == null || description.isBlank()) {
-            throw new BusinessRuleException("La description de la maintenance est obligatoire.");
-        }
-        if (cout == null || cout.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessRuleException("Le coût de la maintenance doit être positif ou nul.");
-        }
-        LocalDate date = dateMaintenance != null ? dateMaintenance : LocalDate.now();
-
-        MaintenanceMaterielles maintenance = new MaintenanceMaterielles();
-        maintenance.setMateriel(materiel);
-        maintenance.setDateMaintenance(date);
-        maintenance.setDescription(description);
-        maintenance.setCout(cout);
-        maintenance.setTechnicien(technicien);
-        MaintenanceMaterielles enregistre = maintenanceMateriellesRepository.save(maintenance);
-
-        materiel.setStatutMaterielles(findOrCreateStatut(STATUT_EN_MAINTENANCE));
-        materiellesRepository.save(materiel);
-
-        enregistrerMouvement(materiel, MVT_MAINTENANCE, BigDecimal.ONE, date);
-
-        if (cout.compareTo(BigDecimal.ZERO) > 0) {
-            caisseService.enregistrerSortie(cout, date);
-        }
-
-        return enregistre;
-    }
-
-    @Transactional
-    public Materielles mettreHorsService(Long idMateriel) {
-        Materielles materiel = findById(idMateriel);
-        LocalDate date = LocalDate.now();
-
-        BigDecimal stockActuel = getStockActuel(idMateriel);
-        BigDecimal quantiteSortie = stockActuel.compareTo(BigDecimal.ZERO) > 0 ? stockActuel : BigDecimal.ONE;
-
-        materiel.setStatutMaterielles(findOrCreateStatut(STATUT_HORS_SERVICE));
-        Materielles enregistre = materiellesRepository.save(materiel);
-
-        enregistrerMouvement(enregistre, MVT_HORS_SERVICE, quantiteSortie, date);
-
-        return enregistre;
     }
 
     @Transactional(readOnly = true)
@@ -3090,31 +3217,215 @@ public class MateriellesService {
         return inventairesMateriellesRepository.findByMateriel_IdOrderByDateInventaireDesc(idMateriel);
     }
 
-    private void enregistrerMouvement(Materielles materiel, String typeLibelle, BigDecimal quantite, LocalDate date) {
-        InventairesMaterielles mouvement = new InventairesMaterielles();
-        mouvement.setMateriel(materiel);
-        mouvement.setDateInventaire(date != null ? date : LocalDate.now());
-        mouvement.setQuantite(quantite);
-        mouvement.setTypeMvtMaterielles(findOrCreateTypeMvt(typeLibelle));
-        inventairesMateriellesRepository.save(mouvement);
+    @Transactional
+    public void enregistrerAchat(Long idMateriel, LocalDate dateEntree, BigDecimal quantite, BigDecimal prixAchat, Long idFournisseur) {
+        Materielles mat = findById(idMateriel);
+        
+        HistoriqueMaterielles histo = new HistoriqueMaterielles();
+        histo.setMateriel(mat);
+        histo.setDateEntree(dateEntree != null ? dateEntree : LocalDate.now());
+        histo.setQuantite(quantite);
+        histo.setPrixAchat(prixAchat);
+        if (idFournisseur != null) {
+            histo.setFournisseur(fournisseursService.findById(idFournisseur));
+        }
+        historiqueMateriellesRepository.save(histo);
+
+        // Mise à jour du stock
+        BigDecimal nouveauStock = getStockActuel(idMateriel).add(quantite);
+        enregistrerSnapshotStock(mat, nouveauStock, dateEntree);
+
+        // Sortie de caisse
+        BigDecimal montantTotal = quantite.multiply(prixAchat);
+        if (montantTotal.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(montantTotal, dateEntree);
+        }
     }
 
-    private StatutMaterielles findOrCreateStatut(String libelle) {
-        return statutMateriellesRepository.findByLibelle(libelle)
-                .orElseGet(() -> {
-                    StatutMaterielles s = new StatutMaterielles();
-                    s.setLibelle(libelle);
-                    return statutMateriellesRepository.save(s);
-                });
+    @Transactional
+    public void enregistrerMaintenance(Long idMateriel, LocalDate dateMaintenance, String description, BigDecimal cout, String technicien) {
+        Materielles mat = findById(idMateriel);
+
+        MaintenanceMaterielles maint = new MaintenanceMaterielles();
+        maint.setMateriel(mat);
+        maint.setDateMaintenance(dateMaintenance != null ? dateMaintenance : LocalDate.now());
+        maint.setDescription(description);
+        maint.setCout(cout);
+        maint.setTechnicien(technicien);
+        maintenanceMateriellesRepository.save(maint);
+
+        // Mise à jour du statut
+        statutMateriellesRepository.findByLibelle(STATUT_EN_MAINTENANCE)
+                .ifPresent(mat::setStatutMaterielles);
+
+        // Sortie de caisse pour frais de maintenance
+        if (cout != null && cout.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(cout, dateMaintenance);
+        }
     }
 
-    private TypeMvtMaterielles findOrCreateTypeMvt(String libelle) {
-        return typeMvtMateriellesRepository.findByLibelle(libelle)
-                .orElseGet(() -> {
-                    TypeMvtMaterielles t = new TypeMvtMaterielles();
-                    t.setLibelle(libelle);
-                    return typeMvtMateriellesRepository.save(t);
-                });
+    @Transactional
+    public void mettreHorsService(Long idMateriel) {
+        Materielles mat = findById(idMateriel);
+        statutMateriellesRepository.findByLibelle(STATUT_HORS_SERVICE)
+                .ifPresent(mat::setStatutMaterielles);
+    }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/service/plats/PlatsService.java
+======================================
+package com.gestion.restaurant.service.plats;
+
+
+
+import com.gestion.restaurant.entity.plats.Plats;
+import com.gestion.restaurant.exception.ResourceNotFoundException;
+import com.gestion.restaurant.repository.plats.PlatsRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class PlatsService {
+
+    private final PlatsRepository platsRepository;
+
+    public PlatsService(PlatsRepository platsRepository) {
+        this.platsRepository = platsRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public Plats findById(Long id) {
+        return platsRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Plat introuvable avec l'ID : " + id));
+    }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/service/recette/RecetteService.java
+======================================
+package com.gestion.restaurant.service.recette;
+
+import com.gestion.restaurant.dto.recette.RecetteRequestDto;
+import com.gestion.restaurant.entity.ingredients.Ingredients;
+import com.gestion.restaurant.entity.plats.Plats;
+import com.gestion.restaurant.entity.plats.RecettePlats;
+import com.gestion.restaurant.exception.BusinessRuleException;
+import com.gestion.restaurant.exception.ResourceNotFoundException;
+import com.gestion.restaurant.repository.ingredients.IngredientsRepository;
+import com.gestion.restaurant.repository.plats.PlatsRepository;
+import com.gestion.restaurant.repository.recettes.RecettePlatsRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Service
+public class RecetteService {
+
+    private final RecettePlatsRepository recettePlatsRepository;
+    private final PlatsRepository platsRepository;
+    private final IngredientsRepository ingredientsRepository;
+
+    public RecetteService(RecettePlatsRepository recettePlatsRepository,
+                          PlatsRepository platsRepository,
+                          IngredientsRepository ingredientsRepository) {
+        this.recettePlatsRepository = recettePlatsRepository;
+        this.platsRepository = platsRepository;
+        this.ingredientsRepository = ingredientsRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecettePlats> getIngredientsParPlat(Long idPlat) {
+        return recettePlatsRepository.findByPlatId(idPlat);
+    }
+
+    @Transactional
+    public void ajouterIngredientARecette(RecetteRequestDto dto) {
+        if (dto.getIdPlat() == null || dto.getIdIngredient() == null) {
+            throw new BusinessRuleException("Veuillez sélectionner un plat et un ingrédient.");
+        }
+        if (dto.getQuantiteRequise() == null || dto.getQuantiteRequise() <= 0) {
+            throw new BusinessRuleException("La quantité requise doit être supérieure à 0.");
+        }
+
+        Plats plat = platsRepository.findById(dto.getIdPlat())
+                .orElseThrow(() -> new ResourceNotFoundException("Plat introuvable"));
+        Ingredients ing = ingredientsRepository.findById(dto.getIdIngredient())
+                .orElseThrow(() -> new ResourceNotFoundException("Ingrédient introuvable"));
+
+        RecettePlats recette = new RecettePlats();
+        recette.setPlat(plat);
+        recette.setIngredient(ing);
+        recette.setQuantiteRequise(BigDecimal.valueOf(dto.getQuantiteRequise()));
+
+        recettePlatsRepository.save(recette);
+    }
+
+    @Transactional
+    public void supprimerIngredientDeRecette(Long idRecette) {
+        if (!recettePlatsRepository.existsById(idRecette)) {
+            throw new ResourceNotFoundException("Ligne de recette introuvable");
+        }
+        recettePlatsRepository.deleteById(idRecette);
+    }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/service/unite/UniteService.java
+======================================
+package com.gestion.restaurant.service.unite;
+
+import org.springframework.stereotype.Service;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class UniteService {
+
+    // Facteurs de conversion vers une unité de référence (ex: gramme pour la masse, ml pour le volume)
+    private static final Map<String, Double> FACTEURS_CONVERSION = new HashMap<>();
+
+    static {
+        // Masse (unité de base : Gramme)
+        FACTEURS_CONVERSION.put("g", 1.0);
+        FACTEURS_CONVERSION.put("kg", 1000.0);
+        FACTEURS_CONVERSION.put("mg", 0.001);
+
+        // Volume (unité de base : Millilitre)
+        FACTEURS_CONVERSION.put("ml", 1.0);
+        FACTEURS_CONVERSION.put("l", 1000.0);
+        FACTEURS_CONVERSION.put("cl", 10.0);
+        FACTEURS_CONVERSION.put("dl", 100.0);
+
+        // Unités simples (Unité, Pièce, Portion)
+        FACTEURS_CONVERSION.put("u", 1.0);
+        FACTEURS_CONVERSION.put("pcs", 1.0);
+    }
+
+    /**
+     * Convertit une quantité d'une unité source vers une unité cible.
+     */
+    public double convertir(String symboleSource, String symboleCible, double quantite) {
+        if (symboleSource == null || symboleCible == null) {
+            throw new IllegalArgumentException("Les symboles d'unités ne peuvent pas être nuls.");
+        }
+
+        String source = symboleSource.toLowerCase().trim();
+        String cible = symboleCible.toLowerCase().trim();
+
+        if (source.equals(cible)) {
+            return quantite;
+        }
+
+        if (!FACTEURS_CONVERSION.containsKey(source) || !FACTEURS_CONVERSION.containsKey(cible)) {
+            throw new IllegalArgumentException("Conversion non supportée entre " + symboleSource + " et " + symboleCible);
+        }
+
+        // Conversion vers l'unité de référence, puis vers l'unité cible
+        double quantiteEnBase = quantite * FACTEURS_CONVERSION.get(source);
+        return quantiteEnBase / FACTEURS_CONVERSION.get(cible);
     }
 }
 
@@ -7173,6 +7484,95 @@ RESOURCE : src/main/resources/templates/plats/list.html
                 </table>
             </section>
         </main>
+    </div>
+</body>
+</html>
+
+======================================
+RESOURCE : src/main/resources/templates/recettes/detail.html
+======================================
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Détails de la Recette</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container my-4">
+        <a th:href="@{/plats}" class="btn btn-secondary mb-3">&larr; Retour à la liste des plats</a>
+
+        <div class="p-3 mb-4 bg-white rounded shadow-sm border">
+            <h2>Composition du plat : <span class="text-primary" th:text="${plat.nom}"></span></h2>
+            <p><strong>Prix de vente:</strong> <span th:text="${plat.prixVente + ' €'}"></span></p>
+        </div>
+
+        <!-- Message de confirmation -->
+        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+        <div class="row">
+            <!-- Formulaire d'ajout d'ingrédient -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">Ajouter un Ingrédient</div>
+                    <div class="card-body">
+                        <form th:action="@{/recettes/ajouter}" method="post" th:object="${nouvelIngredient}">
+                            <input type="hidden" th:field="*{idPlat}"/>
+                            <div class="mb-3">
+                                <label class="form-label">Ingrédient</label>
+                                <select class="form-select" th:field="*{idIngredient}" required>
+                                    <option value="">-- Choisir un ingrédient --</option>
+                                    <option th:each="i : ${ingredients}" 
+                                            th:value="${i.id}" 
+                                            th:text="${i.nom + ' (' + i.unite.symbole + ')'}">
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Quantité Requise</label>
+                                <input type="number" step="0.01" class="form-control" th:field="*{quantiteRequise}" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Ajouter à la recette</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des ingrédients composant la recette -->
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">Ingrédients dans la recette</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Ingrédient</th>
+                                    <th>Quantité Nécessaire</th>
+                                    <th>Unité</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="r : ${recettes}">
+                                    <td th:text="${r.ingredient.nom}"></td>
+                                    <td th:text="${r.quantiteRequise}"></td>
+                                    <td th:text="${r.ingredient.unite.symbole}"></td>
+                                    <td>
+                                        <form th:action="@{/recettes/supprimer/{id}(id=${r.id})}" method="post" onsubmit="return confirm('Retirer cet ingrédient ?');">
+                                            <input type="hidden" name="idPlat" th:value="${plat.id}"/>
+                                            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(recettes)}">
+                                    <td colspan="4" class="text-center text-muted">Aucun ingrédient associé à ce plat pour le moment.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
