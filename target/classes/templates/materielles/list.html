@@ -42,8 +42,8 @@
             <tr th:each="m : ${materiellesList}">
               <td th:text="${m.id}">1</td>
               <td th:text="${m.nom}">Nom</td>
-              <td th:text="${m.categorieMaterielles != null ? m.categorieMaterielles.libelle : 'N/A'}">Catégorie</td>
-              <td th:with="statutLib=${m.statutMaterielles != null ? m.statutMaterielles.libelle : ''}">
+              <td th:text="${m.categorieLibelle != null ? m.categorieLibelle : 'N/A'}"></td>
+              <td th:text="${m.statutLibelle != null ? m.statutLibelle : 'N/A'}"></td>
                 <span class="badge"
                       th:classappend="${statutLib == 'Disponible' or statutLib == 'En service'} ? 'badge-green' : (${statutLib == 'En panne' or statutLib == 'Hors service'} ? 'badge-red' : (${statutLib == 'En maintenance'} ? 'badge-amber' : 'badge-gray'))"
                       th:text="${statutLib != '' ? statutLib : 'N/A'}">Statut</span>

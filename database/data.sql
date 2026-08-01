@@ -1,171 +1,149 @@
--- Active: 1785442317642@@127.0.0.1@5432@restaurant
+-- Active: 1785442317642@@127.0.0.1@5432@restaurant@public
 \c restaurant;
 --modules ingredients et plats  et fournisseurs 
 CREATE TABLE Unite(
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(50) NOT NULL UNIQUE,
     symbole VARCHAR(50)
 );
-CREATE TABLE TypeFournisseurs(
-    id SERIAL PRIMARY KEY,
+CREATE TABLE typefournisseurs (
+    id BIGSERIAL PRIMARY KEY,
     libelle VARCHAR(50) NOT NULL UNIQUE
 );
-CREATE TABLE Fournisseurs(
-    id SERIAL PRIMARY KEY,
-    typeFournisseurs INT NOT NULL,
+CREATE TABLE fournisseurs (
+    id BIGSERIAL PRIMARY KEY,
+    typefournisseurs BIGINT NOT NULL REFERENCES typefournisseurs(id),
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
-    contact VARCHAR(50) NOT NULL,
-    Foreign Key (typeFournisseurs) REFERENCES TypeFournisseurs(id)
+    contact VARCHAR(50) NOT NULL
 );
-CREATE TABLE CategorieIngredients(
-    id SERIAL PRIMARY KEY,
+CREATE TABLE categorieingredients (
+    id BIGSERIAL PRIMARY KEY,
     libelle VARCHAR(50) NOT NULL UNIQUE
-);
-CREATE TABLE StatutIngredient(
-    id SERIAL PRIMARY KEY,
-    libelle VARCHAR(50) NOT NULL UNIQUE
-);
-CREATE TABLE Ingredients(
-    id SERIAL PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    idCategorieIngredients INT NOT NULL,
-    idStatutIngredient INT NOT NULL,
-    idFournisseur INT NOT NULL,
-    idUnite INT NOT NULL,
-    Foreign Key (idUnite) REFERENCES Unite(id),
-    Foreign Key (idCategorieIngredients) REFERENCES CategorieIngredients(id),
-    Foreign KEY (idStatutIngredient) REFERENCES StatutIngredient(id),
-    Foreign KEY (idFournisseur) REFERENCES Fournisseurs(id)
-);
-CREATE TABLE HistoriqueIngredients(
-    id SERIAL PRIMARY KEY,
-    idIngredient INT NOT NULL,
-    dateEntree Date NOT NULL,
-    datePeremption Date CHECK( datePeremption IS NULL OR datePeremption >= dateEntree),
-    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
-    prixAchat DECIMAL(16, 3) NOT NULL CHECK (prixAchat >= 0),
-    Foreign KEY (idIngredient) REFERENCES Ingredients(id)
-);
-CREATE TABLE TypeMvtIngredient(
-    id SERIAL PRIMARY KEY,
-    libelle VARCHAR(50) NOT NULL UNIQUE
-);
-CREATE TABLE InventaireIngredient(
-    id SERIAL PRIMARY KEY,
-    idIngredient INT NOT NULL,
-    dateInventaire Date NOT NULL,
-    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
-    typeMvtIngredient INT NOT NULL,
-    Foreign KEY (idIngredient) REFERENCES Ingredients(id),
-    Foreign KEY (typeMvtIngredient) REFERENCES TypeMvtIngredient(id)
-);
-CREATE TABLE EtatStockIngredient(
-    id SERIAL PRIMARY KEY,
-    idIngredient INT NOT NULL,
-    dateEtatStock Date NOT NULL,
-    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
-    Foreign KEY (idIngredient) REFERENCES Ingredients(id)
-);
-CREATE TABLE CategoriePlats(
-    id SERIAL PRIMARY KEY,
-    libelle VARCHAR(50) NOT NULL UNIQUE
-);
-CREATE TABLE Plats(
-    id SERIAL PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    idCategoriePlats INT NOT NULL,
-    prixVente DECIMAL(16, 3) NOT NULL CHECK (prixVente >= 0),
-    Foreign KEY (idCategoriePlats) REFERENCES CategoriePlats(id)
-);
-CREATE TABLE RecettePlats(
-    id SERIAL PRIMARY KEY,
-    idPlat INT NOT NULL,
-    idIngredient INT NOT NULL,
-    quantiteRequise DECIMAL(16, 3) NOT NULL CHECK (quantiteRequise > 0),
-    Foreign KEY (idPlat) REFERENCES Plats(id),
-    Foreign KEY (idIngredient) REFERENCES Ingredients(id)
-);
--- Materielles 
-CREATE TABLE CategorieMaterielles(
-    id SERIAL PRIMARY KEY,
-    libelle VARCHAR(50) NOT NULL UNIQUE
-);
-CREATE TABLE StatutMaterielles(
-    id SERIAL PRIMARY KEY,
-    libelle VARCHAR(50) NOT NULL UNIQUE
-);
-CREATE TABLE Materielles(
-    id SERIAL PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    dateEntree Date NOT NULL,
-    idCategorieMaterielles INT NOT NULL,
-    idStatutMaterielles INT NOT NULL,
-    Foreign KEY (idCategorieMaterielles) REFERENCES CategorieMaterielles(id),
-    Foreign KEY (idStatutMaterielles) REFERENCES StatutMaterielles(id)
-);
-CREATE TABLE HistoriqueMaterielles(
-    id SERIAL PRIMARY KEY,
-    idMaterielles INT NOT NULL,
-    dateEntree Date NOT NULL,
-    prixAchat DECIMAL(16, 3) NOT NULL CHECK (prixAchat >= 0),
-    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
-    idFournisseur INT,
-    Foreign KEY (idFournisseur) REFERENCES Fournisseurs(id),
-    Foreign KEY (idMaterielles) REFERENCES Materielles(id)
-);
-CREATE TABLE TypeMvtMaterielles(
-    id SERIAL PRIMARY KEY,
-    libelle VARCHAR(50) NOT NULL UNIQUE
-);
-CREATE TABLE InventairesMaterielles(
-    id SERIAL PRIMARY KEY,
-    idMaterielles INT NOT NULL,
-    dateInventaire Date NOT NULL,
-    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
-    typeMvtMaterielles INT NOT NULL,
-    Foreign KEY (idMaterielles) REFERENCES Materielles(id),
-    Foreign KEY (typeMvtMaterielles) REFERENCES TypeMvtMaterielles(id)
-);
-CREATE TABLE EtatStockMaterielles(
-    id SERIAL PRIMARY KEY,
-    idMaterielles INT NOT NULL,
-    dateEtatStock Date NOT NULL,
-    quantite DECIMAL(16, 3) NOT NULL CHECK(quantite > 0),
-    Foreign KEY (idMaterielles) REFERENCES Materielles(id)
 );
 
-CREATE TABLE MaintenanceMaterielles(
-    id SERIAL PRIMARY KEY,
-    idMaterielles INT NOT NULL,
-    dateMaintenance Date NOT NULL,
-    description VARCHAR(255) NOT NULL,
-    cout DECIMAL(16, 3) NOT NULL CHECK (cout >= 0),
-    technicien VARCHAR(100),
-    Foreign KEY (idMaterielles) REFERENCES Materielles(id)
-);
--- Personnels 
-CREATE TABLE RolePersonnels(
-    id SERIAL PRIMARY KEY,
+CREATE TABLE statutingredient (
+    id BIGSERIAL PRIMARY KEY,
     libelle VARCHAR(50) NOT NULL UNIQUE
 );
-CREATE TABLE Personnels(
-    id SERIAL PRIMARY KEY,
+CREATE TABLE ingredients (
+    id BIGSERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    idcategorieingredients BIGINT NOT NULL REFERENCES categorieingredients(id),
+    idstatutingredient BIGINT NOT NULL REFERENCES statutingredient(id),
+    idfournisseur BIGINT NOT NULL REFERENCES fournisseurs(id),
+    idunite BIGINT NOT NULL REFERENCES unite(id)
+);
+CREATE TABLE historiqueingredients (
+    id BIGSERIAL PRIMARY KEY,
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    dateentree DATE NOT NULL,
+    dateperemption DATE CHECK (dateperemption IS NULL OR dateperemption >= dateentree),
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    prixachat DECIMAL(16, 3) NOT NULL CHECK (prixachat >= 0)
+);
+CREATE TABLE typemvtingredient (
+    id BIGSERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE inventaireingredient (
+    id BIGSERIAL PRIMARY KEY,
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    dateinventaire DATE NOT NULL,
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    typemvtingredient BIGINT NOT NULL REFERENCES typemvtingredient(id)
+);
+CREATE TABLE etatstockingredient (
+    id BIGSERIAL PRIMARY KEY,
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    dateetatstock DATE NOT NULL,
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite >= 0)
+);
+CREATE TABLE categorieplats (
+    id BIGSERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE plats (
+    id BIGSERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    idcategorieplats BIGINT NOT NULL REFERENCES categorieplats(id),
+    prixvente DECIMAL(16, 3) NOT NULL CHECK (prixvente >= 0)
+);
+CREATE TABLE recetteplats (
+    id BIGSERIAL PRIMARY KEY,
+    idplat BIGINT NOT NULL REFERENCES plats(id),
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    quantiterequise DECIMAL(16, 3) NOT NULL CHECK (quantiterequise > 0)
+);
+-- Materielles 
+CREATE TABLE categoriematerielles (
+    id BIGSERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE statutmaterielles (
+    id BIGSERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE materielles (
+    id BIGSERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    dateentree DATE NOT NULL,
+    idcategoriematerielles BIGINT NOT NULL REFERENCES categoriematerielles(id),
+    idstatutmaterielles BIGINT NOT NULL REFERENCES statutmaterielles(id)
+);
+CREATE TABLE historiquematerielles (
+    id BIGSERIAL PRIMARY KEY,
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    dateentree DATE NOT NULL,
+    prixachat NUMERIC(16, 3) NOT NULL,
+    quantite NUMERIC(16, 3) NOT NULL,
+    idfournisseur BIGINT REFERENCES fournisseurs(id)
+);
+CREATE TABLE typemvtmaterielles (
+    id BIGSERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE inventairesmaterielles (
+    id BIGSERIAL PRIMARY KEY,
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    dateinventaire DATE NOT NULL,
+    quantite NUMERIC(16, 3) NOT NULL,
+    typemvtmaterielles BIGINT NOT NULL REFERENCES typemvtmaterielles(id)
+);
+CREATE TABLE etatstockmaterielles (
+    id BIGSERIAL PRIMARY KEY,
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    dateetatstock DATE NOT NULL,
+    quantite NUMERIC(16, 3) NOT NULL CHECK (quantite >= 0)
+);
+
+CREATE TABLE maintenancematerielles (
+    id BIGSERIAL PRIMARY KEY,
+    idmaterielles BIGINT REFERENCES materielles(id),
+    datemaintenance DATE NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    cout NUMERIC(16, 3) NOT NULL,
+    technicien VARCHAR(100)
+);
+-- Personnels 
+CREATE TABLE rolepersonnels (
+    id BIGSERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE personnels (
+    id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     contact VARCHAR(50) NOT NULL,
-    idRolePersonnels INT NOT NULL,
-    dateEmbauche Date NOT NULL,
-    Foreign KEY (idRolePersonnels) REFERENCES RolePersonnels(id)
+    idrolepersonnels BIGINT NOT NULL REFERENCES rolepersonnels(id),
+    dateembauche DATE NOT NULL
 );
-CREATE TABLE FichePaie(
-    id SERIAL PRIMARY KEY,
-    idPersonnels INT NOT NULL,
-    datePaie Date NOT NULL,
+CREATE TABLE fichepaie (
+    id BIGSERIAL PRIMARY KEY,
+    idpersonnels BIGINT NOT NULL REFERENCES personnels(id),
+    datepaie DATE NOT NULL,
     salaire DECIMAL(16, 3) NOT NULL CHECK (salaire >= 0),
-    montantTotal DECIMAL(16, 3) NOT NULL CHECK(montantTotal >= 0),
-    --Denormaliser
-    Foreign KEY (idPersonnels) REFERENCES Personnels(id)
+    montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
 );
 CREATE TABLE HistoriqueSalaire(
     id SERIAL PRIMARY KEY,
@@ -196,60 +174,53 @@ CREATE TABLE BonusGlobaleSalairePersonnels(
     Foreign KEY (idPersonnels) REFERENCES Personnels(id)
 );
 --Clients 
-CREATE TABLE TypeClient(
-    id SERIAL PRIMARY KEY,
+CREATE TABLE typeclient (
+    id BIGSERIAL PRIMARY KEY,
     libelle VARCHAR(50) NOT NULL UNIQUE
 );
-CREATE TABLE Clients(
-    id SERIAL PRIMARY KEY,
+CREATE TABLE clients (
+    id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     contact VARCHAR(50) NOT NULL,
-    idTypeClient INT NOT NULL,
-    Foreign KEY (idTypeClient) REFERENCES TypeClient(id)
+    idtypeclient BIGINT NOT NULL REFERENCES typeclient(id)
 );
 -- Commandes et zones Livraisons et factures 
-CREATE TABLE ZonesLivraison(
-    id SERIAL PRIMARY KEY,
+CREATE TABLE zoneslivraison (
+    id BIGSERIAL PRIMARY KEY,
     libelle VARCHAR(50) NOT NULL UNIQUE,
-    min DECIMAL(16, 3) NOT NULL CHECK(min >= 0),
-    max DECIMAL(16, 3) NOT NULL CHECK(max >= min),
-    prix DECIMAL(16, 3) NOT NULL CHECK(prix >= 0)
+    min DECIMAL(16, 3) NOT NULL,
+    max DECIMAL(16, 3) NOT NULL,
+    prix DECIMAL(16, 3) NOT NULL CHECK (prix >= 0)
 );
-CREATE TABLE Commandes(
-    id SERIAL PRIMARY KEY,
-    idClient INT NOT NULL,
-    dateCommande DATE NOT NULL,
-    idZoneLivraison INT NOT NULL,
-    montantTotal DECIMAL(16, 3) CHEcK (montantTotal > 0) NOT NULL,
-    FOREIGN KEY(idClient) REFERENCES Clients(id),
-    FOREIGN KEY(idZoneLivraison) REFERENCES ZonesLivraison(id)
+CREATE TABLE commandes (
+    id BIGSERIAL PRIMARY KEY,
+    idclient BIGINT NOT NULL REFERENCES clients(id),
+    datecommande DATE NOT NULL,
+    idzonelivraison BIGINT NOT NULL REFERENCES zoneslivraison(id),
+    montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
 );
-CREATE TABLE DetailsCommandes(
-    id SERIAL PRIMARY KEY,
-    idCommande INT NOT NULL,
-    idPlat INT NOT NULL,
-    quantite DECIMAL(16, 3) CHECK (quantite > 0) NOT NULL,
-    prixUnitaire DECIMAL(16, 3) CHECK (prixUnitaire >= 0) NOT NULL,
-    montant DECIMAL(16, 3) CHECK (montant > 0) NOT NULL,
-    FOREIGN KEY(idCommande) REFERENCES Commandes(id),
-    FOREIGN KEY(idPlat) REFERENCES Plats(id)
+CREATE TABLE detailscommandes (
+    id BIGSERIAL PRIMARY KEY,
+    idcommande BIGINT NOT NULL REFERENCES commandes(id),
+    idplat BIGINT NOT NULL REFERENCES plats(id),
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    prixunitaire DECIMAL(16, 3) NOT NULL CHECK (prixunitaire >= 0),
+    montant DECIMAL(16, 3) NOT NULL CHECK (montant >= 0)
 );
-CREATE TABLE FacturesCommandes(
-    id SERIAL PRIMARY KEY,
-    idCommande INT NOT NULL,
-    dateFacture DATE NOT NULL,
-    montantTotal DECIMAL(16, 3) CHECK (montantTotal > 0) NOT NULL,
-    FOREIGN KEY(idCommande) REFERENCES Commandes(id)
+CREATE TABLE facturescommandes (
+    id BIGSERIAL PRIMARY KEY,
+    idcommande BIGINT NOT NULL REFERENCES commandes(id),
+    datefacture DATE NOT NULL,
+    montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
 );
-CREATE TABLE TypeMouvementCaisse (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE typemouvementcaisse (
+    id BIGSERIAL PRIMARY KEY,
     libelle VARCHAR(50) NOT NULL UNIQUE
 );
-CREATE TABLE MouvementCaisse (
-    id SERIAL PRIMARY KEY,
-    dateMouvement DATE NOT NULL,
-    montant DECIMAL(16, 3) CHECK (montant > 0) NOT NULL,
-    typeMouvement INT NOT NULL,
-    FOREIGN KEY(typeMouvement) REFERENCES TypeMouvementCaisse(id)
+CREATE TABLE mouvementcaisse (
+    id BIGSERIAL PRIMARY KEY,
+    datemouvement DATE NOT NULL,
+    montant DECIMAL(16, 3) NOT NULL CHECK (montant > 0),
+    typemouvement BIGINT NOT NULL REFERENCES typemouvementcaisse(id)
 );

@@ -1,6 +1,6 @@
 package com.gestion.restaurant.controller.materielles;
 
-import com.gestion.restaurant.entity.materielles.Materielles;
+import com.gestion.restaurant.dto.materielles.*;
 import com.gestion.restaurant.service.materielles.MateriellesService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -21,34 +21,30 @@ public class MateriellesController {
     }
 
     @GetMapping
-    public String listMaterielles(@RequestParam(value = "categorie", required = false) Long idCategorie,
-            @RequestParam(value = "statut", required = false) Long idStatut,
-            Model model) {
-        model.addAttribute("materiellesList", materiellesService.findAllFiltered(idCategorie, idStatut));
+    public String listMaterielles(@ModelAttribute("criteria") MaterielSearchCriteria criteria, Model model) {
+        model.addAttribute("materiellesList", materiellesService.search(criteria));
         model.addAttribute("categories", materiellesService.findAllCategories());
         model.addAttribute("statuts", materiellesService.findAllStatuts());
-        model.addAttribute("selectedCategorie", idCategorie);
-        model.addAttribute("selectedStatut", idStatut);
         return "materielles/list";
     }
 
     @GetMapping("/new")
     public String showCreateForm(Model model) {
-        model.addAttribute("materiel", new Materielles());
+        model.addAttribute("materiel", new MaterielRequestDto());
         model.addAttribute("categories", materiellesService.findAllCategories());
         model.addAttribute("statuts", materiellesService.findAllStatuts());
         return "materielles/form";
     }
 
     @PostMapping("/save")
-    public String saveMateriel(@ModelAttribute("materiel") Materielles materiel) {
-        Materielles enregistre = materiellesService.save(materiel);
+    public String saveMateriel(@ModelAttribute("materiel") MaterielRequestDto dto) {
+        MaterielResponseDto enregistre = materiellesService.saveFromDto(dto);
         return "redirect:/materielles/" + enregistre.getId() + "/detail";
     }
 
     @GetMapping("/edit/{id}")
     public String showEditForm(@PathVariable("id") Long id, Model model) {
-        model.addAttribute("materiel", materiellesService.findById(id));
+        model.addAttribute("materiel", materiellesService.findDtoById(id));
         model.addAttribute("categories", materiellesService.findAllCategories());
         model.addAttribute("statuts", materiellesService.findAllStatuts());
         return "materielles/form";
@@ -59,9 +55,6 @@ public class MateriellesController {
         materiellesService.deleteById(id);
         return "redirect:/materielles";
     }
-
-    // ───────────────────────── Fiche détail : historique / maintenance /
-    // inventaire ─────────────────────────
 
     @GetMapping("/{id}/detail")
     public String detail(@PathVariable("id") Long id, Model model) {
@@ -99,6 +92,4 @@ public class MateriellesController {
         materiellesService.mettreHorsService(id);
         return "redirect:/materielles/" + id + "/detail";
     }
-
-
 }

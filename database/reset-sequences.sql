@@ -16,7 +16,6 @@ BEGIN
         JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE c.relkind = 'r' AND n.nspname = 'public'
     LOOP
-        -- Cherche la séquence liée à la colonne "id" de chaque table (si elle existe)
         seq_name := pg_get_serial_sequence('public.' || quote_ident(r.table_name), 'id');
 
         IF seq_name IS NOT NULL THEN

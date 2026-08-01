@@ -1,25 +1,32 @@
 package com.gestion.restaurant.service.materielles;
 
+import com.gestion.restaurant.dto.materielles.*;
 import com.gestion.restaurant.entity.fournisseurs.Fournisseurs;
 import com.gestion.restaurant.entity.materielles.*;
+import com.gestion.restaurant.exception.BusinessRuleException;
+import com.gestion.restaurant.exception.ResourceNotFoundException;
 import com.gestion.restaurant.repository.materielles.*;
 import com.gestion.restaurant.service.caisse.CaisseService;
 import com.gestion.restaurant.service.fournisseurs.FournisseursService;
+import com.gestion.restaurant.specification.materielles.MateriellesSpecification;
+
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MateriellesService {
 
     public static final String STATUT_HORS_SERVICE   = "Hors Service";
     public static final String STATUT_EN_MAINTENANCE = "En maintenance";
-    public static final String MVT_ENTREE       = "Entree";
-    public static final String MVT_MAINTENANCE  = "Maintenance";
-    public static final String MVT_HORS_SERVICE = "HorsService";
+    public static final String MVT_ENTREE            = "Entree";
+    public static final String MVT_MAINTENANCE       = "Maintenance";
+    public static final String MVT_HORS_SERVICE      = "HorsService";
 
     private final MateriellesRepository materiellesRepository;
     private final CategorieMateriellesRepository categorieMateriellesRepository;
@@ -54,26 +61,26 @@ public class MateriellesService {
         this.fournisseursService = fournisseursService;
     }
 
-    // ───────────────────────── CRUD de base ─────────────────────────
+    // ───────────────────────── Recherche Multicritère via DTO & Specification ─────────────────────────
 
     @Transactional(readOnly = true)
-    public List<Materielles> findAllFiltered(Long idCategorie, Long idStatut) {
-        if (idCategorie != null && idStatut != null) {
-            return materiellesRepository.findByCategorieMaterielles_IdAndStatutMaterielles_Id(idCategorie, idStatut);
-        }
-        if (idCategorie != null) {
-            return materiellesRepository.findByCategorieMaterielles_Id(idCategorie);
-        }
-        if (idStatut != null) {
-            return materiellesRepository.findByStatutMaterielles_Id(idStatut);
-        }
-        return materiellesRepository.findAll();
+    public List<MaterielResponseDto> search(MaterielSearchCriteria criteria) {
+        Specification<Materielles> spec = MateriellesSpecification.withFilters(criteria);
+        return materiellesRepository.findAll(spec)
+                .stream()
+                .map(MaterielMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public Materielles findById(Long id) {
         return materiellesRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("ID Materiel invalide : " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Matériel introuvable avec l'ID : " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public MaterielResponseDto findDtoById(Long id) {
+        return MaterielMapper.toDto(findById(id));
     }
 
     @Transactional(readOnly = true)
@@ -91,31 +98,45 @@ public class MateriellesService {
         return fournisseursService.findAll();
     }
 
+    // ───────────────────────── Sauvegarde / Modification ─────────────────────────
+
     @Transactional
-    public Materielles save(Materielles materiel) {
-        if (materiel.getNom() == null || materiel.getNom().isBlank()) {
-            throw new IllegalArgumentException("Le nom du matériel est obligatoire");
+    public MaterielResponseDto saveFromDto(MaterielRequestDto dto) {
+        if (dto.getNom() == null || dto.getNom().isBlank()) {
+            throw new BusinessRuleException("Le nom du matériel est obligatoire.");
         }
-        if (materiel.getCategorieMaterielles() == null || materiel.getCategorieMaterielles().getId() == null) {
-            throw new IllegalArgumentException("La catégorie du matériel est obligatoire");
+        if (dto.getIdCategorie() == null) {
+            throw new BusinessRuleException("La catégorie du matériel est obligatoire.");
         }
-        if (materiel.getStatutMaterielles() == null || materiel.getStatutMaterielles().getId() == null) {
-            throw new IllegalArgumentException("Le statut du matériel est obligatoire");
+        if (dto.getIdStatut() == null) {
+            throw new BusinessRuleException("Le statut du matériel est obligatoire.");
         }
-        if (materiel.getDateEntree() == null) {
-            materiel.setDateEntree(LocalDate.now());
-        }
-        // Pas de mouvement de stock ici : la fiche matériel ne porte pas de quantité.
-        // Le stock démarre uniquement via un achat (enregistrerAchat), comme pour les ingrédients.
-        return materiellesRepository.save(materiel);
+
+        Materielles materiel = (dto.getId() != null) ? findById(dto.getId()) : new Materielles();
+        
+        CategorieMaterielles categorie = categorieMateriellesRepository.findById(dto.getIdCategorie())
+                .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable avec l'ID : " + dto.getIdCategorie()));
+        
+        StatutMaterielles statut = statutMateriellesRepository.findById(dto.getIdStatut())
+                .orElseThrow(() -> new ResourceNotFoundException("Statut introuvable avec l'ID : " + dto.getIdStatut()));
+
+        materiel.setNom(dto.getNom());
+        materiel.setCategorieMaterielles(categorie);
+        materiel.setStatutMaterielles(statut);
+        materiel.setDateEntree(dto.getDateEntree() != null ? dto.getDateEntree() : LocalDate.now());
+
+        return MaterielMapper.toDto(materiellesRepository.save(materiel));
     }
 
     @Transactional
     public void deleteById(Long id) {
+        if (!materiellesRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Impossible de supprimer : Matériel introuvable avec l'ID : " + id);
+        }
         materiellesRepository.deleteById(id);
     }
 
-    // ───────────────────────── Stock courant (EtatStockMaterielles) ─────────────────────────
+    // ───────────────────────── Stock & Historique ─────────────────────────
 
     @Transactional(readOnly = true)
     public BigDecimal getStockActuel(Long idMateriel) {
@@ -132,19 +153,11 @@ public class MateriellesService {
         etatStockMateriellesRepository.save(snapshot);
     }
 
-    // ───────────────────────── Historique des achats (suivi prix) ─────────────────────────
-
     @Transactional(readOnly = true)
     public List<HistoriqueMaterielles> findHistorique(Long idMateriel) {
         return historiqueMateriellesRepository.findByMateriel_IdOrderByDateEntreeDesc(idMateriel);
     }
 
-    /**
-     * Enregistre un achat de matériel : trace le prix payé (HistoriqueMaterielles),
-     * journalise le mouvement (InventairesMaterielles), met à jour le stock courant
-     * (EtatStockMaterielles) et génère automatiquement une sortie de caisse
-     * (MouvementCaisse :: Sortie) pour quantite * prixAchat.
-     */
     @Transactional
     public HistoriqueMaterielles enregistrerAchat(Long idMateriel, LocalDate dateEntree,
                                                    BigDecimal quantite, BigDecimal prixAchat,
@@ -152,10 +165,10 @@ public class MateriellesService {
         Materielles materiel = findById(idMateriel);
 
         if (quantite == null || quantite.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("La quantité achetée doit être positive");
+            throw new BusinessRuleException("La quantité achetée doit être strictement supérieure à zéro.");
         }
         if (prixAchat == null || prixAchat.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Le prix d'achat doit être positif ou nul");
+            throw new BusinessRuleException("Le prix d'achat doit être positif ou nul.");
         }
         LocalDate date = dateEntree != null ? dateEntree : LocalDate.now();
 
@@ -182,19 +195,13 @@ public class MateriellesService {
         return enregistre;
     }
 
-    // ───────────────────────── Maintenance ─────────────────────────
+    // ───────────────────────── Maintenance & Hors Service ─────────────────────────
 
     @Transactional(readOnly = true)
     public List<MaintenanceMaterielles> findMaintenances(Long idMateriel) {
         return maintenanceMateriellesRepository.findByMateriel_IdOrderByDateMaintenanceDesc(idMateriel);
     }
 
-    /**
-     * Enregistre une opération de maintenance : passe le matériel en statut
-     * "En maintenance", journalise le mouvement (quantité symbolique = 1,
-     * la maintenance ne modifie pas le stock physique) et génère
-     * automatiquement une sortie de caisse pour le coût de l'intervention.
-     */
     @Transactional
     public MaintenanceMaterielles enregistrerMaintenance(Long idMateriel, LocalDate dateMaintenance,
                                                            String description, BigDecimal cout,
@@ -202,10 +209,10 @@ public class MateriellesService {
         Materielles materiel = findById(idMateriel);
 
         if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("La description de la maintenance est obligatoire");
+            throw new BusinessRuleException("La description de la maintenance est obligatoire.");
         }
         if (cout == null || cout.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Le coût de la maintenance doit être positif ou nul");
+            throw new BusinessRuleException("Le coût de la maintenance doit être positif ou nul.");
         }
         LocalDate date = dateMaintenance != null ? dateMaintenance : LocalDate.now();
 
@@ -229,20 +236,6 @@ public class MateriellesService {
         return enregistre;
     }
 
-    // ───────────────────────── Mise hors service ─────────────────────────
-
-    /**
-     * Déclare le matériel hors service : journalise le mouvement (la quantité
-     * sortie = le stock actuellement détenu) et remet le stock courant à 0.
-     */
-/**
-     * Déclare le matériel hors service : journalise le mouvement de sortie
-     * (quantité = le stock actuellement détenu, garantie > 0). On n'insère
-     * PAS de photo de stock à 0 dans EtatStockMaterielles, car cette table
-     * impose CHECK(quantite > 0) — l'absence de nouvelle photo signifie
-     * "plus de mouvement depuis la dernière entrée", et le statut du
-     * matériel (Hors service) fait foi pour l'affichage.
-     */
     @Transactional
     public Materielles mettreHorsService(Long idMateriel) {
         Materielles materiel = findById(idMateriel);
@@ -255,12 +248,9 @@ public class MateriellesService {
         Materielles enregistre = materiellesRepository.save(materiel);
 
         enregistrerMouvement(enregistre, MVT_HORS_SERVICE, quantiteSortie, date);
-        // Pas de enregistrerSnapshotStock(..., ZERO, ...) ici : contrainte CHECK(quantite > 0)
 
         return enregistre;
     }
-
-    // ───────────────────────── Inventaire (journal des mouvements) ─────────────────────────
 
     @Transactional(readOnly = true)
     public List<InventairesMaterielles> findInventaire(Long idMateriel) {

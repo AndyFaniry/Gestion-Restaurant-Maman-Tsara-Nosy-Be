@@ -1,13 +1,17 @@
 com/gestion/restaurant/repository/materielles/HistoriqueMateriellesRepository.class
 com/gestion/restaurant/repository/livraisons/ZonesLivraisonRepository.class
 com/gestion/restaurant/entity/ingredients/HistoriqueIngredients.class
+com/gestion/restaurant/specification/materielles/MateriellesSpecification.class
 com/gestion/restaurant/repository/plats/CategoriePlatsRepository.class
 com/gestion/restaurant/entity/ingredients/StatutIngredient.class
 com/gestion/restaurant/repository/caisse/TypeMouvementCaisseRepository.class
 com/gestion/restaurant/entity/fournisseurs/Fournisseurs.class
 com/gestion/restaurant/repository/commandes/DetailsCommandesRepository.class
+com/gestion/restaurant/dto/materielles/MaterielSearchCriteria.class
 com/gestion/restaurant/service/ingredients/UniteService.class
+com/gestion/restaurant/exception/GlobalExceptionHandler.class
 com/gestion/restaurant/repository/materielles/MateriellesRepository.class
+com/gestion/restaurant/exception/ResourceNotFoundException.class
 com/gestion/restaurant/controller/plats/PlatsController.class
 com/gestion/restaurant/entity/ingredients/TypeMvtIngredient.class
 com/gestion/restaurant/repository/ingredients/TypeMvtIngredientRepository.class
@@ -29,6 +33,7 @@ com/gestion/restaurant/repository/materielles/MaintenanceMateriellesRepository.c
 com/gestion/restaurant/repository/fournisseur/FournisseursRepository.class
 com/gestion/restaurant/entity/livraisons/ZonesLivraison.class
 com/gestion/restaurant/repository/caisse/MouvementCaisseRepository.class
+com/gestion/restaurant/dto/materielles/MaterielRequestDto.class
 com/gestion/restaurant/repository/personnels/PersonnelsRepository.class
 com/gestion/restaurant/entity/materielles/CategorieMaterielles.class
 com/gestion/restaurant/controller/dashboard/DashboardController.class
@@ -36,6 +41,7 @@ com/gestion/restaurant/repository/clients/ClientsRepository.class
 com/gestion/restaurant/entity/ingredients/Unite.class
 com/gestion/restaurant/entity/plats/CategoriePlats.class
 com/gestion/restaurant/entity/caisse/MouvementCaisse.class
+com/gestion/restaurant/dto/materielles/MaterielMapper.class
 com/gestion/restaurant/repository/personnels/FichePaieRepository.class
 com/gestion/restaurant/entity/fournisseurs/TypeFournisseurs.class
 com/gestion/restaurant/entity/commandes/Commandes.class
@@ -71,7 +77,9 @@ com/gestion/restaurant/entity/personnels/Personnels.class
 com/gestion/restaurant/entity/ingredients/CategorieIngredients.class
 com/gestion/restaurant/repository/ingredients/UniteRepository.class
 com/gestion/restaurant/entity/ingredients/EtatStockIngredient.class
+com/gestion/restaurant/dto/materielles/MaterielResponseDto.class
 com/gestion/restaurant/repository/fournisseur/TypeFournisseursRepository.class
+com/gestion/restaurant/exception/BusinessRuleException.class
 com/gestion/restaurant/entity/commandes/DetailsCommandes.class
 com/gestion/restaurant/repository/materielles/CategorieMateriellesRepository.class
 com/gestion/restaurant/controller/ingredients/StockController.class

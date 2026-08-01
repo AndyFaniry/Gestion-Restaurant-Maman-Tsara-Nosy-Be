@@ -35,14 +35,10 @@ DELETE FROM materielles;
 DELETE FROM categoriematerielles;
 DELETE FROM statutmaterielles;
 -- Insertion directe avec la valeur NULL pour le symbole
-INSERT INTO unite (nom, symbole)
-VALUES ('Kilogramme', 'kg');
-INSERT INTO unite (nom, symbole)
-VALUES ('Gramme', 'g');
-INSERT INTO unite (nom, symbole)
-VALUES ('Litre', 'L');
-INSERT INTO unite (nom, symbole)
-VALUES ('Pièce', NULL);
+INSERT INTO unite (nom, symbole) VALUES 
+('Gramme', 'g'), ('Kilogramme', 'kg'), ('Litre', 'L'), ('Pièce', 'pcs');
+
+
 -- Le symbole est NULL ici
 INSERT INTO unite (nom, symbole)
 VALUES ('Sachet', NULL);
@@ -164,11 +160,7 @@ VALUES (
         45000.000,
         'Rija Electro'
     );
-INSERT INTO typemouvementcaisse (id, libelle)
-VALUES (1, 'Vente Plat'),
-    (2, 'Achat Fournisseur'),
-    (3, 'Paiement Salaire'),
-    (4, 'Frais Généraux');
+INSERT INTO typemouvementcaisse (libelle) VALUES ('Entree'), ('Sortie');
 -- Zones de livraison (Nosy Be)
 INSERT INTO zoneslivraison (id, libelle, min, max, prix)
 VALUES (1, 'Hell-Ville Center', 0.000, 5.000, 5000.000),
@@ -279,5 +271,5 @@ INSERT INTO mouvementcaisse (id, datemouvement, montant, typemouvement)
 VALUES (1, '2026-07-30', 45000.000, 1);
 
 INSERT INTO mouvementcaisse (id, datemouvement, montant, typemouvement) VALUES 
-(2, '2025-03-15', 890000.000, 2),  -- Achat Fournisseur : caisse enregistreuse
-(3, '2026-07-25',  45000.000, 4);  -- Frais Généraux : maintenance caisse enregistreuse
+(2, '2025-03-15', 890000.000, 1),  -- Achat Fournisseur : caisse enregistreuse
+(3, '2026-07-25',  45000.000, 2);  -- Frais Généraux : maintenance caisse enregistreuse
