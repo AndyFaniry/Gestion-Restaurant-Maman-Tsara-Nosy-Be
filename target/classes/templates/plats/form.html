@@ -1,41 +1,222 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Formulaire Plat</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Ajout de Plats & Recettes</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
-<body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1 th:text="${plat.id == null ? 'Ajouter un Plat' : 'Modifier le Plat'}"></h1>
-            </header>
-            <section class="form-container">
-                <form th:action="@{/plats/save}" th:object="${plat}" method="post" class="custom-form">
-                    <input type="hidden" th:field="*{id}" />
-                    <div class="form-group">
-                        <label>Nom :</label>
-                        <input type="text" th:field="*{nom}" required class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label>Catégorie :</label>
-                        <select th:field="*{categoriePlats}" class="form-control" required>
-                            <option value="">-- Sélectionner --</option>
-                            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Prix de Vente (Ar) :</label>
-                        <input type="number" step="0.01" th:field="*{prixVente}" required class="form-control" />
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
-                        <a th:href="@{/plats}" class="btn btn-secondary">Annuler</a>
-                    </div>
-                </form>
-            </section>
-        </main>
+<body class="bg-light">
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Saisie Multiple de Plats & Recettes</h2>
+        <a th:href="@{/plats}" class="btn btn-secondary">Retour à la liste</a>
     </div>
+
+    <form th:action="@{/plats/save-multiple}" method="post" id="platsForm">
+        <div id="platsContainer">
+            <!-- Bloc Dynamique Plat N°0 par défaut -->
+            <div class="card mb-4 plat-block border-primary shadow-sm" data-plat-index="0">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Plat #<span class="plat-number">1</span></h5>
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-plat" style="display: none;">
+                        <i class="bi bi-x-lg"></i> Supprimer ce plat
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Nom du Plat *</label>
+                            <input type="text" name="plats[0].nom" class="form-control" required placeholder="ex: Pizza Margherita">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Catégorie *</label>
+                            <select name="plats[0].idCategorie" class="form-select" required>
+                                <option value="">-- Sélectionner --</option>
+                                <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Prix de Vente (Ar) *</label>
+                            <input type="number" step="0.01" name="plats[0].prixVente" class="form-control" required placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <h6 class="mt-4 text-secondary">Composition de la Recette (Ingrédients)</h6>
+                    <div class="ingredients-container" data-plat-index="0">
+                        <!-- Ligne d'ingrédient initiale -->
+                        <div class="row g-2 mb-2 ingredient-row align-items-center">
+                            <div class="col-md-6">
+                                <select name="plats[0].ingredients[0].idIngredient" class="form-select">
+                                    <option value="">-- Choisir un Ingrédient --</option>
+                                    <option th:each="ing : ${allIngredients}" th:value="${ing.id}" 
+                                            th:text="${ing.nom + ' (' + ing.unite.symbole + ')'}"></option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" step="0.001" name="plats[0].ingredients[0].quantiteRequise" class="form-control" placeholder="Quantité requise">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-outline-danger w-100 btn-remove-ing">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-success mt-2 btn-add-ing">
+                        <i class="bi bi-plus-circle"></i> Ajouter un Ingrédient
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-between mb-5">
+            <button type="button" id="btnAddPlat" class="btn btn-info text-white">
+                <i class="bi bi-plus-square"></i> Ajouter un autre Plat
+            </button>
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="bi bi-check-circle"></i> Enregistrer tous les plats
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Template HTML caché pour les Ingrédients -->
+<template id="ingredientTemplate">
+    <div class="row g-2 mb-2 ingredient-row align-items-center">
+        <div class="col-md-6">
+            <select class="form-select ing-select">
+                <option value="">-- Choisir un Ingrédient --</option>
+                <option th:each="ing : ${allIngredients}" th:value="${ing.id}" 
+                        th:text="${ing.nom + ' (' + (ing.unite != null ? ing.unite.symbole : '') + ')'}"></option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <input type="number" step="0.001" class="form-control ing-qty" placeholder="Quantité requise">
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-outline-danger w-100 btn-remove-ing">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    let platIndex = 0;
+
+    // Ajouter un nouveau Plat
+    document.getElementById("btnAddPlat").addEventListener("click", function () {
+        platIndex++;
+        const container = document.getElementById("platsContainer");
+        const firstBlock = container.querySelector(".plat-block");
+        const newBlock = firstBlock.cloneNode(true);
+
+        newBlock.setAttribute("data-plat-index", platIndex);
+        newBlock.querySelector(".plat-number").textContent = platIndex + 1;
+
+        // Réinitialiser les champs textes/selects du plat
+        newBlock.querySelector("input[name*='.nom']").name = `plats[${platIndex}].nom`;
+        newBlock.querySelector("input[name*='.nom']").value = "";
+        
+        newBlock.querySelector("select[name*='.idCategorie']").name = `plats[${platIndex}].idCategorie`;
+        newBlock.querySelector("select[name*='.idCategorie']").selectedIndex = 0;
+        
+        newBlock.querySelector("input[name*='.prixVente']").name = `plats[${platIndex}].prixVente`;
+        newBlock.querySelector("input[name*='.prixVente']").value = "";
+
+        // Nettoyer les ingrédients pour n'en garder qu'un seul vierge
+        const ingContainer = newBlock.querySelector(".ingredients-container");
+        ingContainer.setAttribute("data-plat-index", platIndex);
+        ingContainer.innerHTML = "";
+
+        // Ajouter un premier ingrédient vide
+        appendIngredientRow(ingContainer, platIndex, 0);
+
+        // Afficher le bouton supprimer plat
+        const deleteBtn = newBlock.querySelector(".btn-remove-plat");
+        deleteBtn.style.display = "block";
+
+        container.appendChild(newBlock);
+        updatePlatIndexes();
+    });
+
+    // Gestion des événements délégués (Boutons dynamiques)
+    document.addEventListener("click", function (e) {
+        // Ajouter Ingrédient
+        if (e.target.closest(".btn-add-ing")) {
+            const platBlock = e.target.closest(".plat-block");
+            const pIdx = platBlock.getAttribute("data-plat-index");
+            const ingContainer = platBlock.querySelector(".ingredients-container");
+            const ingRows = ingContainer.querySelectorAll(".ingredient-row");
+            appendIngredientRow(ingContainer, pIdx, ingRows.length);
+        }
+
+        // Supprimer Ingrédient
+        if (e.target.closest(".btn-remove-ing")) {
+            const row = e.target.closest(".ingredient-row");
+            const container = row.closest(".ingredients-container");
+            if (container.querySelectorAll(".ingredient-row").length > 1) {
+                row.remove();
+                reindexIngredients(container);
+            } else {
+                alert("Un plat doit avoir au moins une ligne d'ingrédient ou être laissée vide.");
+            }
+        }
+
+        // Supprimer Plat
+        if (e.target.closest(".btn-remove-plat")) {
+            const block = e.target.closest(".plat-block");
+            block.remove();
+            updatePlatIndexes();
+        }
+    });
+
+    function appendIngredientRow(container, pIdx, ingIdx) {
+        const template = document.getElementById("ingredientTemplate").content.cloneNode(true);
+        const row = template.querySelector(".ingredient-row");
+        
+        const select = row.querySelector(".ing-select");
+        select.name = `plats[${pIdx}].ingredients[${ingIdx}].idIngredient`;
+
+        const input = row.querySelector(".ing-qty");
+        input.name = `plats[${pIdx}].ingredients[${ingIdx}].quantiteRequise`;
+
+        container.appendChild(row);
+    }
+
+    function reindexIngredients(container) {
+        const pIdx = container.getAttribute("data-plat-index");
+        const rows = container.querySelectorAll(".ingredient-row");
+        rows.forEach((row, ingIdx) => {
+            const select = row.querySelector("select");
+            const input = row.querySelector("input");
+            select.name = `plats[${pIdx}].ingredients[${ingIdx}].idIngredient`;
+            input.name = `plats[${pIdx}].ingredients[${ingIdx}].quantiteRequise`;
+        });
+    }
+
+    function updatePlatIndexes() {
+        const blocks = document.querySelectorAll(".plat-block");
+        blocks.forEach((block, index) => {
+            block.setAttribute("data-plat-index", index);
+            block.querySelector(".plat-number").textContent = index + 1;
+            
+            block.querySelector("input[name*='.nom']").name = `plats[${index}].nom`;
+            block.querySelector("select[name*='.idCategorie']").name = `plats[${index}].idCategorie`;
+            block.querySelector("input[name*='.prixVente']").name = `plats[${index}].prixVente`;
+            
+            const ingContainer = block.querySelector(".ingredients-container");
+            ingContainer.setAttribute("data-plat-index", index);
+            reindexIngredients(ingContainer);
+
+            const deleteBtn = block.querySelector(".btn-remove-plat");
+            deleteBtn.style.display = blocks.length > 1 ? "block" : "none";
+        });
+        platIndex = blocks.length - 1;
+    }
+});
+</script>
 </body>
 </html>

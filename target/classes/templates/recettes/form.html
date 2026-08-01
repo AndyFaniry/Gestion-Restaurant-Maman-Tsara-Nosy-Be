@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Créer / Modifier une Recette</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+<div class="container my-5">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Composition de la Recette du Plat</h3>
+            <a th:href="@{/plats}" class="btn btn-outline-light btn-sm">Retour à la liste</a>
+        </div>
+        <div class="card-body">
+            
+            <form th:action="@{/plats/recette/save}" method="post" id="recetteForm">
+                <!-- Identification du Plat -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="platId" class="form-label font-weight-bold">Sélectionner le Plat :</label>
+                        <select class="form-select" id="platId" name="platId" required>
+                            <option value="" disabled selected>-- Choisir un plat --</option>
+                            <option th:each="plat : ${plats}" 
+                                    th:value="${plat.id}" 
+                                    th:text="${plat.nom + ' (' + plat.categoriePlats.libelle + ')'}">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr>
+                
+                <!-- Section Ingrédients Dynamiques -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="card-title text-secondary mb-0">Ingrédients Requis</h4>
+                    <button type="button" class="btn btn-success" id="btnAddIngredient">
+                        <i class="bi bi-plus-circle"></i> Ajouter un ingrédient
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle" id="ingredientsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 50%;">Ingrédient / Produit</th>
+                                <th style="width: 35%;">Quantité Nécessaire</th>
+                                <th style="width: 15%;" class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ingredientsContainer">
+                            <!-- Ligne par défaut (Index 0) -->
+                            <tr class="ingredient-row">
+                                <td>
+                                    <select name="ingredients[0].idProduit" class="form-select produit-select" required>
+                                        <option value="" disabled selected>-- Sélectionner l'ingrédient --</option>
+                                        <option th:each="prod : ${produits}" 
+                                                th:value="${prod.id}" 
+                                                th:text="${prod.nom + ' (' + prod.uniteMesure + ')'}">
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" min="0.01" name="ingredients[0].quantite" 
+                                           class="form-control" placeholder="Ex: 0.500" required>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-danger btn-sm remove-row" disabled>
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <button type="reset" class="btn btn-secondary me-md-2">Réinitialiser</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer la Recette</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Rows Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const container = document.getElementById('ingredientsContainer');
+    const btnAdd = document.getElementById('btnAddIngredient');
+
+    // Mettre à jour les indices des formulaires après chaque modification
+    function updateRowIndices() {
+        const rows = container.querySelectorAll('.ingredient-row');
+        rows.forEach((row, index) => {
+            const select = row.querySelector('.produit-select');
+            const input = row.querySelector('input[type="number"]');
+
+            select.name = `ingredients[${index}].idProduit`;
+            input.name = `ingredients[${index}].quantite`;
+
+            // Désactiver le bouton de suppression s'il n'y a qu'une seule ligne
+            const btnRemove = row.querySelector('.remove-row');
+            if (rows.length === 1) {
+                btnRemove.setAttribute('disabled', 'true');
+            } else {
+                btnRemove.removeAttribute('disabled');
+            }
+        });
+    }
+
+    // Ajouter une nouvelle ligne
+    btnAdd.addEventListener('click', function () {
+        const firstRow = container.querySelector('.ingredient-row');
+        const newRow = firstRow.cloneNode(true);
+
+        // Réinitialiser les valeurs des inputs clonés
+        newRow.querySelector('.produit-select').value = '';
+        newRow.querySelector('input[type="number"]').value = '';
+
+        container.appendChild(newRow);
+        updateRowIndices();
+    });
+
+    // Supprimer une ligne via Event Delegation
+    container.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-row')) {
+            const rows = container.querySelectorAll('.ingredient-row');
+            if (rows.length > 1) {
+                e.target.closest('.ingredient-row').remove();
+                updateRowIndices();
+            }
+        }
+    });
+});
+</script>
+</body>
+</html>

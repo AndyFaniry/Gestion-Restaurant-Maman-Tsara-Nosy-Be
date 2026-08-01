@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : dim. 02 août 2026 01:59:46 EAT
+Date : dim. 02 août 2026 02:27:26 EAT
 
 
 ======================================
@@ -631,9 +631,10 @@ FILE : src/main/java/com/gestion/restaurant/controller/plats/PlatsController.jav
 ======================================
 package com.gestion.restaurant.controller.plats;
 
-import com.gestion.restaurant.entity.plats.Plats;
-import com.gestion.restaurant.repository.plats.CategoriePlatsRepository;
-import com.gestion.restaurant.repository.plats.PlatsRepository;
+import com.gestion.restaurant.dto.plats.PlatMultipleRequestDto;
+import com.gestion.restaurant.dto.plats.PlatSearchCriteria;
+import com.gestion.restaurant.service.ingredients.IngredientsService;
+import com.gestion.restaurant.service.plats.PlatsService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -642,45 +643,38 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/plats")
 public class PlatsController {
 
-    private final PlatsRepository platsRepository;
-    private final CategoriePlatsRepository categoriePlatsRepository;
+    private final PlatsService platsService;
+    private final IngredientsService ingredientsService;
 
-    public PlatsController(PlatsRepository platsRepository, CategoriePlatsRepository categoriePlatsRepository) {
-        this.platsRepository = platsRepository;
-        this.categoriePlatsRepository = categoriePlatsRepository;
+    public PlatsController(PlatsService platsService, IngredientsService ingredientsService) {
+        this.platsService = platsService;
+        this.ingredientsService = ingredientsService;
     }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("platsList", platsRepository.findAll());
+    public String list(@ModelAttribute("criteria") PlatSearchCriteria criteria, Model model) {
+        model.addAttribute("platsList", platsService.search(criteria));
+        model.addAttribute("categories", platsService.findAllCategories());
         return "plats/list";
     }
 
     @GetMapping("/new")
-    public String showCreate(Model model) {
-        model.addAttribute("plat", new Plats());
-        model.addAttribute("categories", categoriePlatsRepository.findAll());
+    public String showCreateForm(Model model) {
+        model.addAttribute("formDto", new PlatMultipleRequestDto());
+        model.addAttribute("categories", platsService.findAllCategories());
+        model.addAttribute("allIngredients", ingredientsService.findAll());
         return "plats/form";
     }
 
-    @PostMapping("/save")
-    public String save(@ModelAttribute("plat") Plats plat) {
-        platsRepository.save(plat);
+    @PostMapping("/save-multiple")
+    public String saveMultiple(@ModelAttribute("formDto") PlatMultipleRequestDto formDto) {
+        platsService.saveMultiplePlats(formDto);
         return "redirect:/plats";
-    }
-
-    @GetMapping("/edit/{id}")
-    public String showEdit(@PathVariable("id") Long id, Model model) {
-        Plats plat = platsRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Plat introuvable : " + id));
-        model.addAttribute("plat", plat);
-        model.addAttribute("categories", categoriePlatsRepository.findAll());
-        return "plats/form";
     }
 
     @GetMapping("/delete/{id}")
     public String delete(@PathVariable("id") Long id) {
-        platsRepository.deleteById(id);
+        platsService.deleteById(id);
         return "redirect:/plats";
     }
 }
@@ -957,6 +951,64 @@ public class MaterielSearchCriteria {
     
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate dateEntreeFin;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/plats/PlatMultipleRequestDto.java
+======================================
+package com.gestion.restaurant.dto.plats;
+
+import lombok.Data;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+@Data
+public class PlatMultipleRequestDto {
+
+    @Data
+    public static class IngredientQuantiteDto {
+        private Long idIngredient;
+        private BigDecimal quantiteRequise;
+    }
+
+    @Data
+    public static class PlatFormItem {
+        private String nom;
+        private Long idCategorie;
+        private BigDecimal prixVente;
+        private List<IngredientQuantiteDto> ingredients = new ArrayList<>();
+    }
+
+    private List<PlatFormItem> plats = new ArrayList<>();
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/plats/PlatSearchCriteria.java
+======================================
+package com.gestion.restaurant.dto.plats;
+
+import lombok.Data;
+
+@Data
+public class PlatSearchCriteria {
+    private String nom;
+    private Long idCategorie;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/recette/RecetteIngredientFormDto.java
+======================================
+package com.gestion.restaurant.dto.recette;
+
+import lombok.Data;
+import java.math.BigDecimal;
+
+@Data
+public class RecetteIngredientFormDto {
+    private Long idPlat;
+    private Long idIngredient;
+    private BigDecimal quantiteRequise;
 }
 
 ======================================
@@ -2482,12 +2534,12 @@ package com.gestion.restaurant.repository.plats;
 
 import com.gestion.restaurant.entity.plats.Plats;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor; // Import à ajouter
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PlatsRepository extends JpaRepository<Plats, Long> {
+public interface PlatsRepository extends JpaRepository<Plats, Long>, JpaSpecificationExecutor<Plats> {
 }
-
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/recettes/RecettePlatsRepository.java
@@ -3277,27 +3329,100 @@ FILE : src/main/java/com/gestion/restaurant/service/plats/PlatsService.java
 ======================================
 package com.gestion.restaurant.service.plats;
 
-
-
+import com.gestion.restaurant.dto.plats.PlatMultipleRequestDto;
+import com.gestion.restaurant.dto.plats.PlatSearchCriteria;
+import com.gestion.restaurant.entity.ingredients.Ingredients;
+import com.gestion.restaurant.entity.plats.CategoriePlats;
 import com.gestion.restaurant.entity.plats.Plats;
+import com.gestion.restaurant.entity.plats.RecettePlats;
 import com.gestion.restaurant.exception.ResourceNotFoundException;
+import com.gestion.restaurant.repository.ingredients.IngredientsRepository;
+import com.gestion.restaurant.repository.plats.CategoriePlatsRepository;
 import com.gestion.restaurant.repository.plats.PlatsRepository;
+import com.gestion.restaurant.repository.recettes.RecettePlatsRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class PlatsService {
 
     private final PlatsRepository platsRepository;
+    private final CategoriePlatsRepository categoriePlatsRepository;
+    private final RecettePlatsRepository recettePlatsRepository;
+    private final IngredientsRepository ingredientsRepository;
 
-    public PlatsService(PlatsRepository platsRepository) {
+    public PlatsService(PlatsRepository platsRepository,
+                        CategoriePlatsRepository categoriePlatsRepository,
+                        RecettePlatsRepository recettePlatsRepository,
+                        IngredientsRepository ingredientsRepository) {
         this.platsRepository = platsRepository;
+        this.categoriePlatsRepository = categoriePlatsRepository;
+        this.recettePlatsRepository = recettePlatsRepository;
+        this.ingredientsRepository = ingredientsRepository;
     }
 
-    @Transactional(readOnly = true)
+    public List<Plats> search(PlatSearchCriteria criteria) {
+        Specification<Plats> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (criteria.getNom() != null && !criteria.getNom().trim().isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("nom")), "%" + criteria.getNom().toLowerCase() + "%"));
+            }
+            if (criteria.getIdCategorie() != null) {
+                predicates.add(cb.equal(root.get("categoriePlats").get("id"), criteria.getIdCategorie()));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return platsRepository.findAll(spec);
+    }
+
     public Plats findById(Long id) {
         return platsRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Plat introuvable avec l'ID : " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Plat non trouvé avec l'ID: " + id));
+    }
+
+    public List<CategoriePlats> findAllCategories() {
+        return categoriePlatsRepository.findAll();
+    }
+
+    @Transactional
+    public void saveMultiplePlats(PlatMultipleRequestDto dto) {
+        for (PlatMultipleRequestDto.PlatFormItem item : dto.getPlats()) {
+            if (item.getNom() == null || item.getNom().trim().isEmpty()) continue;
+
+            CategoriePlats cat = categoriePlatsRepository.findById(item.getIdCategorie())
+                    .orElseThrow(() -> new ResourceNotFoundException("Catégorie introuvable : " + item.getIdCategorie()));
+
+            Plats plat = new Plats();
+            plat.setNom(item.getNom());
+            plat.setCategoriePlats(cat);
+            plat.setPrixVente(item.getPrixVente());
+            Plats platSauvegarde = platsRepository.save(plat);
+
+            if (item.getIngredients() != null) {
+                for (PlatMultipleRequestDto.IngredientQuantiteDto ingDto : item.getIngredients()) {
+                    if (ingDto.getIdIngredient() != null && ingDto.getQuantiteRequise() != null) {
+                        Ingredients ing = ingredientsRepository.findById(ingDto.getIdIngredient())
+                                .orElseThrow(() -> new ResourceNotFoundException("Ingrédient introuvable"));
+
+                        RecettePlats rp = new RecettePlats();
+                        rp.setPlat(platSauvegarde);
+                        rp.setIngredient(ing);
+                        rp.setQuantiteRequise(ingDto.getQuantiteRequise());
+                        recettePlatsRepository.save(rp);
+                    }
+                }
+            }
+        }
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        platsRepository.deleteById(id);
     }
 }
 
@@ -7404,44 +7529,225 @@ RESOURCE : src/main/resources/templates/personnels/list.html
 RESOURCE : src/main/resources/templates/plats/form.html
 ======================================
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Formulaire Plat</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Ajout de Plats & Recettes</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
-<body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1 th:text="${plat.id == null ? 'Ajouter un Plat' : 'Modifier le Plat'}"></h1>
-            </header>
-            <section class="form-container">
-                <form th:action="@{/plats/save}" th:object="${plat}" method="post" class="custom-form">
-                    <input type="hidden" th:field="*{id}" />
-                    <div class="form-group">
-                        <label>Nom :</label>
-                        <input type="text" th:field="*{nom}" required class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label>Catégorie :</label>
-                        <select th:field="*{categoriePlats}" class="form-control" required>
-                            <option value="">-- Sélectionner --</option>
-                            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Prix de Vente (Ar) :</label>
-                        <input type="number" step="0.01" th:field="*{prixVente}" required class="form-control" />
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
-                        <a th:href="@{/plats}" class="btn btn-secondary">Annuler</a>
-                    </div>
-                </form>
-            </section>
-        </main>
+<body class="bg-light">
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Saisie Multiple de Plats & Recettes</h2>
+        <a th:href="@{/plats}" class="btn btn-secondary">Retour à la liste</a>
     </div>
+
+    <form th:action="@{/plats/save-multiple}" method="post" id="platsForm">
+        <div id="platsContainer">
+            <!-- Bloc Dynamique Plat N°0 par défaut -->
+            <div class="card mb-4 plat-block border-primary shadow-sm" data-plat-index="0">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Plat #<span class="plat-number">1</span></h5>
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-plat" style="display: none;">
+                        <i class="bi bi-x-lg"></i> Supprimer ce plat
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Nom du Plat *</label>
+                            <input type="text" name="plats[0].nom" class="form-control" required placeholder="ex: Pizza Margherita">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Catégorie *</label>
+                            <select name="plats[0].idCategorie" class="form-select" required>
+                                <option value="">-- Sélectionner --</option>
+                                <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Prix de Vente (Ar) *</label>
+                            <input type="number" step="0.01" name="plats[0].prixVente" class="form-control" required placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <h6 class="mt-4 text-secondary">Composition de la Recette (Ingrédients)</h6>
+                    <div class="ingredients-container" data-plat-index="0">
+                        <!-- Ligne d'ingrédient initiale -->
+                        <div class="row g-2 mb-2 ingredient-row align-items-center">
+                            <div class="col-md-6">
+                                <select name="plats[0].ingredients[0].idIngredient" class="form-select">
+                                    <option value="">-- Choisir un Ingrédient --</option>
+                                    <option th:each="ing : ${allIngredients}" th:value="${ing.id}" 
+                                            th:text="${ing.nom + ' (' + ing.unite.symbole + ')'}"></option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" step="0.001" name="plats[0].ingredients[0].quantiteRequise" class="form-control" placeholder="Quantité requise">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-outline-danger w-100 btn-remove-ing">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-success mt-2 btn-add-ing">
+                        <i class="bi bi-plus-circle"></i> Ajouter un Ingrédient
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-between mb-5">
+            <button type="button" id="btnAddPlat" class="btn btn-info text-white">
+                <i class="bi bi-plus-square"></i> Ajouter un autre Plat
+            </button>
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="bi bi-check-circle"></i> Enregistrer tous les plats
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Template HTML caché pour les Ingrédients -->
+<template id="ingredientTemplate">
+    <div class="row g-2 mb-2 ingredient-row align-items-center">
+        <div class="col-md-6">
+            <select class="form-select ing-select">
+                <option value="">-- Choisir un Ingrédient --</option>
+                <option th:each="ing : ${allIngredients}" th:value="${ing.id}" 
+                        th:text="${ing.nom + ' (' + (ing.unite != null ? ing.unite.symbole : '') + ')'}"></option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <input type="number" step="0.001" class="form-control ing-qty" placeholder="Quantité requise">
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-outline-danger w-100 btn-remove-ing">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    let platIndex = 0;
+
+    // Ajouter un nouveau Plat
+    document.getElementById("btnAddPlat").addEventListener("click", function () {
+        platIndex++;
+        const container = document.getElementById("platsContainer");
+        const firstBlock = container.querySelector(".plat-block");
+        const newBlock = firstBlock.cloneNode(true);
+
+        newBlock.setAttribute("data-plat-index", platIndex);
+        newBlock.querySelector(".plat-number").textContent = platIndex + 1;
+
+        // Réinitialiser les champs textes/selects du plat
+        newBlock.querySelector("input[name*='.nom']").name = `plats[${platIndex}].nom`;
+        newBlock.querySelector("input[name*='.nom']").value = "";
+        
+        newBlock.querySelector("select[name*='.idCategorie']").name = `plats[${platIndex}].idCategorie`;
+        newBlock.querySelector("select[name*='.idCategorie']").selectedIndex = 0;
+        
+        newBlock.querySelector("input[name*='.prixVente']").name = `plats[${platIndex}].prixVente`;
+        newBlock.querySelector("input[name*='.prixVente']").value = "";
+
+        // Nettoyer les ingrédients pour n'en garder qu'un seul vierge
+        const ingContainer = newBlock.querySelector(".ingredients-container");
+        ingContainer.setAttribute("data-plat-index", platIndex);
+        ingContainer.innerHTML = "";
+
+        // Ajouter un premier ingrédient vide
+        appendIngredientRow(ingContainer, platIndex, 0);
+
+        // Afficher le bouton supprimer plat
+        const deleteBtn = newBlock.querySelector(".btn-remove-plat");
+        deleteBtn.style.display = "block";
+
+        container.appendChild(newBlock);
+        updatePlatIndexes();
+    });
+
+    // Gestion des événements délégués (Boutons dynamiques)
+    document.addEventListener("click", function (e) {
+        // Ajouter Ingrédient
+        if (e.target.closest(".btn-add-ing")) {
+            const platBlock = e.target.closest(".plat-block");
+            const pIdx = platBlock.getAttribute("data-plat-index");
+            const ingContainer = platBlock.querySelector(".ingredients-container");
+            const ingRows = ingContainer.querySelectorAll(".ingredient-row");
+            appendIngredientRow(ingContainer, pIdx, ingRows.length);
+        }
+
+        // Supprimer Ingrédient
+        if (e.target.closest(".btn-remove-ing")) {
+            const row = e.target.closest(".ingredient-row");
+            const container = row.closest(".ingredients-container");
+            if (container.querySelectorAll(".ingredient-row").length > 1) {
+                row.remove();
+                reindexIngredients(container);
+            } else {
+                alert("Un plat doit avoir au moins une ligne d'ingrédient ou être laissée vide.");
+            }
+        }
+
+        // Supprimer Plat
+        if (e.target.closest(".btn-remove-plat")) {
+            const block = e.target.closest(".plat-block");
+            block.remove();
+            updatePlatIndexes();
+        }
+    });
+
+    function appendIngredientRow(container, pIdx, ingIdx) {
+        const template = document.getElementById("ingredientTemplate").content.cloneNode(true);
+        const row = template.querySelector(".ingredient-row");
+        
+        const select = row.querySelector(".ing-select");
+        select.name = `plats[${pIdx}].ingredients[${ingIdx}].idIngredient`;
+
+        const input = row.querySelector(".ing-qty");
+        input.name = `plats[${pIdx}].ingredients[${ingIdx}].quantiteRequise`;
+
+        container.appendChild(row);
+    }
+
+    function reindexIngredients(container) {
+        const pIdx = container.getAttribute("data-plat-index");
+        const rows = container.querySelectorAll(".ingredient-row");
+        rows.forEach((row, ingIdx) => {
+            const select = row.querySelector("select");
+            const input = row.querySelector("input");
+            select.name = `plats[${pIdx}].ingredients[${ingIdx}].idIngredient`;
+            input.name = `plats[${pIdx}].ingredients[${ingIdx}].quantiteRequise`;
+        });
+    }
+
+    function updatePlatIndexes() {
+        const blocks = document.querySelectorAll(".plat-block");
+        blocks.forEach((block, index) => {
+            block.setAttribute("data-plat-index", index);
+            block.querySelector(".plat-number").textContent = index + 1;
+            
+            block.querySelector("input[name*='.nom']").name = `plats[${index}].nom`;
+            block.querySelector("select[name*='.idCategorie']").name = `plats[${index}].idCategorie`;
+            block.querySelector("input[name*='.prixVente']").name = `plats[${index}].prixVente`;
+            
+            const ingContainer = block.querySelector(".ingredients-container");
+            ingContainer.setAttribute("data-plat-index", index);
+            reindexIngredients(ingContainer);
+
+            const deleteBtn = block.querySelector(".btn-remove-plat");
+            deleteBtn.style.display = blocks.length > 1 ? "block" : "none";
+        });
+        platIndex = blocks.length - 1;
+    }
+});
+</script>
 </body>
 </html>
 
@@ -7449,131 +7755,405 @@ RESOURCE : src/main/resources/templates/plats/form.html
 RESOURCE : src/main/resources/templates/plats/list.html
 ======================================
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Plats - Maman Tsara Nosy-Be</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <title>Gestion des Plats</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
-<body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1>Carte des Plats</h1>
-                <a th:href="@{/plats/new}" class="btn btn-primary">Nouveau Plat</a>
-            </header>
-            <section class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th><th>Nom</th><th>Catégorie</th><th>Prix de vente (Ar)</th><th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="p : ${platsList}">
-                            <td th:text="${p.id}">1</td>
-                            <td th:text="${p.nom}">Plat</td>
-                            <td th:text="${p.categoriePlats != null ? p.categoriePlats.libelle : 'N/A'}">Catégorie</td>
-                            <td th:text="${#numbers.formatDecimal(p.prixVente, 1, 'POINT', 2, 'COMMA')}">35000.00</td>
-                            <td class="actions">
-                                <a th:href="@{/plats/edit/{id}(id=${p.id})}" class="btn btn-warning">Modifier</a>
-                                <a th:href="@{/plats/delete/{id}(id=${p.id})}" class="btn btn-danger" onclick="return confirm('Supprimer ce plat ?');">Supprimer</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-        </main>
+<body class="bg-light">
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-egg-fried"></i> Liste des Plats</h2>
+        <a th:href="@{/plats/new}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Créer des Plats / Recettes</a>
     </div>
+
+    <!-- Formulaire de filtre -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form th:action="@{/plats}" method="get" th:object="${criteria}" class="row g-3">
+                <div class="col-md-5">
+                    <input type="text" th:field="*{nom}" class="form-control" placeholder="Rechercher par nom de plat...">
+                </div>
+                <div class="col-md-5">
+                    <select th:field="*{idCategorie}" class="form-select">
+                        <option value="">-- Toutes les catégories --</option>
+                        <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.libelle}"></option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-filter"></i> Filtrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tableau des résultats -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-striped table-hover mb-0">
+                <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Nom du Plat</th>
+                    <th>Catégorie</th>
+                    <th>Prix de Vente</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="plat : ${platsList}">
+                    <td th:text="${plat.id}"></td>
+                    <td class="fw-bold" th:text="${plat.nom}"></td>
+                    <td><span class="badge bg-info text-dark" th:text="${plat.categoriePlats.libelle}"></span></td>
+                    <td th:text="${#numbers.formatDecimal(plat.prixVente, 1, 'POINT', 2, 'COMMA') + ' Ar'}"></td>
+                    <td class="text-center">
+                        <a th:href="@{/recettes/plat/{id}(id=${plat.id})}" class="btn btn-sm btn-outline-primary" title="Voir Recette">
+                            <i class="bi bi-journal-text"></i> Recette
+                        </a>
+                        <a th:href="@{/plats/delete/{id}(id=${plat.id})}" class="btn btn-sm btn-outline-danger" 
+                           onclick="return confirm('Supprimer ce plat ?');">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(platsList)}">
+                    <td colspan="5" class="text-center text-muted py-4">Aucun plat trouvé.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 </body>
 </html>
 
 ======================================
-RESOURCE : src/main/resources/templates/recettes/detail.html
+RESOURCE : src/main/resources/templates/recettes/details.html
 ======================================
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Détails de la Recette</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Recette du Plat</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
-    <div class="container my-4">
-        <a th:href="@{/plats}" class="btn btn-secondary mb-3">&larr; Retour à la liste des plats</a>
+<div class="container my-5">
+    <a th:href="@{/plats}" class="btn btn-outline-secondary mb-3"><i class="bi bi-arrow-left"></i> Retour aux plats</a>
 
-        <div class="p-3 mb-4 bg-white rounded shadow-sm border">
-            <h2>Composition du plat : <span class="text-primary" th:text="${plat.nom}"></span></h2>
-            <p><strong>Prix de vente:</strong> <span th:text="${plat.prixVente + ' €'}"></span></p>
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title text-primary" th:text="${plat.nom}"></h2>
+            <p class="card-text text-muted">
+                Catégorie : <span class="badge bg-info text-dark" th:text="${plat.categoriePlats.libelle}"></span> | 
+                Prix de Vente : <strong th:text="${#numbers.formatDecimal(plat.prixVente, 1, 'POINT', 2, 'COMMA') + ' Ar'}"></strong>
+            </p>
         </div>
+    </div>
 
-        <!-- Message de confirmation -->
-        <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <!-- Message de notification -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 
-        <div class="row">
-            <!-- Formulaire d'ajout d'ingrédient -->
-            <div class="col-md-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">Ajouter un Ingrédient</div>
-                    <div class="card-body">
-                        <form th:action="@{/recettes/ajouter}" method="post" th:object="${nouvelIngredient}">
-                            <input type="hidden" th:field="*{idPlat}"/>
-                            <div class="mb-3">
-                                <label class="form-label">Ingrédient</label>
-                                <select class="form-select" th:field="*{idIngredient}" required>
-                                    <option value="">-- Choisir un ingrédient --</option>
-                                    <option th:each="i : ${ingredients}" 
-                                            th:value="${i.id}" 
-                                            th:text="${i.nom + ' (' + i.unite.symbole + ')'}">
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Quantité Requise</label>
-                                <input type="number" step="0.01" class="form-control" th:field="*{quantiteRequise}" required>
-                            </div>
-                            <button type="submit" class="btn btn-success w-100">Ajouter à la recette</button>
-                        </form>
-                    </div>
+    <div class="row">
+        <!-- Ingrédients composants le plat -->
+        <div class="col-md-7">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-basket"></i> Ingrédients de la Recette</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead>
+                        <tr>
+                            <th>Ingrédient</th>
+                            <th>Quantité Requise</th>
+                            <th>Unité</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="recette : ${recettes}">
+                            <td class="fw-bold" th:text="${recette.ingredient.nom}"></td>
+                            <td th:text="${recette.quantiteRequise}"></td>
+                            <td th:text="${recette.ingredient.unite.symbole}"></td>
+                            <td class="text-center">
+                                <form th:action="@{/recettes/supprimer/{id}(id=${recette.id})}" method="post" style="display:inline;">
+                                    <input type="hidden" name="idPlat" th:value="${plat.id}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Retirer cet ingrédient ?');">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(recettes)}">
+                            <td colspan="4" class="text-center text-muted py-3">Aucun ingrédient associé à ce plat.</td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
-            <!-- Liste des ingrédients composant la recette -->
-            <div class="col-md-8">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-dark text-white">Ingrédients dans la recette</div>
-                    <div class="card-body p-0">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Ingrédient</th>
-                                    <th>Quantité Nécessaire</th>
-                                    <th>Unité</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="r : ${recettes}">
-                                    <td th:text="${r.ingredient.nom}"></td>
-                                    <td th:text="${r.quantiteRequise}"></td>
-                                    <td th:text="${r.ingredient.unite.symbole}"></td>
-                                    <td>
-                                        <form th:action="@{/recettes/supprimer/{id}(id=${r.id})}" method="post" onsubmit="return confirm('Retirer cet ingrédient ?');">
-                                            <input type="hidden" name="idPlat" th:value="${plat.id}"/>
-                                            <button type="submit" class="btn btn-danger btn-sm">Supprimer</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                <tr th:if="${#lists.isEmpty(recettes)}">
-                                    <td colspan="4" class="text-center text-muted">Aucun ingrédient associé à ce plat pour le moment.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        <!-- Formulaire rapide d'ajout d'ingrédient -->
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Ajouter un Ingrédient</h5>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/recettes/ajouter}" method="post" th:object="${nouvelIngredient}">
+                        <input type="hidden" th:field="*{idPlat}"/>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Ingrédient</label>
+                            <select th:field="*{idIngredient}" class="form-select" required>
+                                <option value="">-- Choisir un Ingrédient --</option>
+                                <option th:each="ing : ${ingredients}" th:value="${ing.id}" 
+                                        th:text="${ing.nom + ' (' + ing.unite.symbole + ')'}"></option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Quantité Requise</label>
+                            <input type="number" step="0.001" th:field="*{quantiteRequise}" class="form-control" required placeholder="ex: 0.250">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-lg"></i> Ajouter à la recette</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+</div>
+</body>
+</html>
+
+======================================
+RESOURCE : src/main/resources/templates/recettes/form.html
+======================================
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Créer / Modifier une Recette</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+<div class="container my-5">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Composition de la Recette du Plat</h3>
+            <a th:href="@{/plats}" class="btn btn-outline-light btn-sm">Retour à la liste</a>
+        </div>
+        <div class="card-body">
+            
+            <form th:action="@{/plats/recette/save}" method="post" id="recetteForm">
+                <!-- Identification du Plat -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label for="platId" class="form-label font-weight-bold">Sélectionner le Plat :</label>
+                        <select class="form-select" id="platId" name="platId" required>
+                            <option value="" disabled selected>-- Choisir un plat --</option>
+                            <option th:each="plat : ${plats}" 
+                                    th:value="${plat.id}" 
+                                    th:text="${plat.nom + ' (' + plat.categoriePlats.libelle + ')'}">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr>
+                
+                <!-- Section Ingrédients Dynamiques -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="card-title text-secondary mb-0">Ingrédients Requis</h4>
+                    <button type="button" class="btn btn-success" id="btnAddIngredient">
+                        <i class="bi bi-plus-circle"></i> Ajouter un ingrédient
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle" id="ingredientsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 50%;">Ingrédient / Produit</th>
+                                <th style="width: 35%;">Quantité Nécessaire</th>
+                                <th style="width: 15%;" class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ingredientsContainer">
+                            <!-- Ligne par défaut (Index 0) -->
+                            <tr class="ingredient-row">
+                                <td>
+                                    <select name="ingredients[0].idProduit" class="form-select produit-select" required>
+                                        <option value="" disabled selected>-- Sélectionner l'ingrédient --</option>
+                                        <option th:each="prod : ${produits}" 
+                                                th:value="${prod.id}" 
+                                                th:text="${prod.nom + ' (' + prod.uniteMesure + ')'}">
+                                        </option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" min="0.01" name="ingredients[0].quantite" 
+                                           class="form-control" placeholder="Ex: 0.500" required>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-danger btn-sm remove-row" disabled>
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <button type="reset" class="btn btn-secondary me-md-2">Réinitialiser</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer la Recette</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Rows Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const container = document.getElementById('ingredientsContainer');
+    const btnAdd = document.getElementById('btnAddIngredient');
+
+    // Mettre à jour les indices des formulaires après chaque modification
+    function updateRowIndices() {
+        const rows = container.querySelectorAll('.ingredient-row');
+        rows.forEach((row, index) => {
+            const select = row.querySelector('.produit-select');
+            const input = row.querySelector('input[type="number"]');
+
+            select.name = `ingredients[${index}].idProduit`;
+            input.name = `ingredients[${index}].quantite`;
+
+            // Désactiver le bouton de suppression s'il n'y a qu'une seule ligne
+            const btnRemove = row.querySelector('.remove-row');
+            if (rows.length === 1) {
+                btnRemove.setAttribute('disabled', 'true');
+            } else {
+                btnRemove.removeAttribute('disabled');
+            }
+        });
+    }
+
+    // Ajouter une nouvelle ligne
+    btnAdd.addEventListener('click', function () {
+        const firstRow = container.querySelector('.ingredient-row');
+        const newRow = firstRow.cloneNode(true);
+
+        // Réinitialiser les valeurs des inputs clonés
+        newRow.querySelector('.produit-select').value = '';
+        newRow.querySelector('input[type="number"]').value = '';
+
+        container.appendChild(newRow);
+        updateRowIndices();
+    });
+
+    // Supprimer une ligne via Event Delegation
+    container.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-row')) {
+            const rows = container.querySelectorAll('.ingredient-row');
+            if (rows.length > 1) {
+                e.target.closest('.ingredient-row').remove();
+                updateRowIndices();
+            }
+        }
+    });
+});
+</script>
+</body>
+</html>
+
+======================================
+RESOURCE : src/main/resources/templates/recettes/list.html
+======================================
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu & Plats du Restaurant</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Catalogue des Plats</h2>
+        <a th:href="@{/plats/recette/nouveau}" class="btn btn-success">+ Nouvelle Recette</a>
+    </div>
+
+    <!-- Barre de filtrage par Catégorie -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <label for="categoryFilter" class="col-md-3 col-form-label font-weight-bold">Filtrer par Catégorie :</label>
+                <div class="col-md-6">
+                    <select id="categoryFilter" class="form-select">
+                        <option value="ALL">-- Toutes les catégories --</option>
+                        <option th:each="cat : ${categories}" 
+                                th:value="${cat.id}" 
+                                th:text="${cat.libelle}">
+                        </option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grille des plats -->
+    <div class="row" id="platsGrid">
+        <div th:each="plat : ${plats}" class="col-md-4 mb-4 plat-card" th:data-category-id="${plat.categoriePlats.id}">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <span class="badge bg-secondary mb-2" th:text="${plat.categoriePlats.libelle}">Catégorie</span>
+                    <h5 class="card-title" th:text="${plat.nom}">Nom du Plat</h5>
+                    <p class="card-text text-muted" th:text="${plat.description}">Description...</p>
+                    <h6 class="text-primary font-weight-bold" th:text="${#numbers.formatCurrency(plat.prixVente)}">0.00 MGA</h6>
+                </div>
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-between">
+                    <a th:href="@{'/plats/detail/' + ${plat.id}}" class="btn btn-sm btn-outline-primary">Voir Recette</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script de Filtrage Dynamique côté Client -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryFilter = document.getElementById('categoryFilter');
+    const cards = document.querySelectorAll('.plat-card');
+
+    categoryFilter.addEventListener('change', function() {
+        const selectedCategoryId = this.value;
+
+        cards.forEach(card => {
+            const cardCategoryId = card.getAttribute('data-category-id');
+
+            if (selectedCategoryId === 'ALL' || cardCategoryId === selectedCategoryId) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
 </body>
 </html>
 

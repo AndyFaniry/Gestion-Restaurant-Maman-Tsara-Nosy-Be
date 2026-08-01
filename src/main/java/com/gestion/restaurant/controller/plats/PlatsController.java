@@ -1,8 +1,9 @@
 package com.gestion.restaurant.controller.plats;
 
-import com.gestion.restaurant.entity.plats.Plats;
-import com.gestion.restaurant.repository.plats.CategoriePlatsRepository;
-import com.gestion.restaurant.repository.plats.PlatsRepository;
+import com.gestion.restaurant.dto.plats.PlatMultipleRequestDto;
+import com.gestion.restaurant.dto.plats.PlatSearchCriteria;
+import com.gestion.restaurant.service.ingredients.IngredientsService;
+import com.gestion.restaurant.service.plats.PlatsService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -11,45 +12,38 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/plats")
 public class PlatsController {
 
-    private final PlatsRepository platsRepository;
-    private final CategoriePlatsRepository categoriePlatsRepository;
+    private final PlatsService platsService;
+    private final IngredientsService ingredientsService;
 
-    public PlatsController(PlatsRepository platsRepository, CategoriePlatsRepository categoriePlatsRepository) {
-        this.platsRepository = platsRepository;
-        this.categoriePlatsRepository = categoriePlatsRepository;
+    public PlatsController(PlatsService platsService, IngredientsService ingredientsService) {
+        this.platsService = platsService;
+        this.ingredientsService = ingredientsService;
     }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("platsList", platsRepository.findAll());
+    public String list(@ModelAttribute("criteria") PlatSearchCriteria criteria, Model model) {
+        model.addAttribute("platsList", platsService.search(criteria));
+        model.addAttribute("categories", platsService.findAllCategories());
         return "plats/list";
     }
 
     @GetMapping("/new")
-    public String showCreate(Model model) {
-        model.addAttribute("plat", new Plats());
-        model.addAttribute("categories", categoriePlatsRepository.findAll());
+    public String showCreateForm(Model model) {
+        model.addAttribute("formDto", new PlatMultipleRequestDto());
+        model.addAttribute("categories", platsService.findAllCategories());
+        model.addAttribute("allIngredients", ingredientsService.findAll());
         return "plats/form";
     }
 
-    @PostMapping("/save")
-    public String save(@ModelAttribute("plat") Plats plat) {
-        platsRepository.save(plat);
+    @PostMapping("/save-multiple")
+    public String saveMultiple(@ModelAttribute("formDto") PlatMultipleRequestDto formDto) {
+        platsService.saveMultiplePlats(formDto);
         return "redirect:/plats";
-    }
-
-    @GetMapping("/edit/{id}")
-    public String showEdit(@PathVariable("id") Long id, Model model) {
-        Plats plat = platsRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Plat introuvable : " + id));
-        model.addAttribute("plat", plat);
-        model.addAttribute("categories", categoriePlatsRepository.findAll());
-        return "plats/form";
     }
 
     @GetMapping("/delete/{id}")
     public String delete(@PathVariable("id") Long id) {
-        platsRepository.deleteById(id);
+        platsService.deleteById(id);
         return "redirect:/plats";
     }
 }

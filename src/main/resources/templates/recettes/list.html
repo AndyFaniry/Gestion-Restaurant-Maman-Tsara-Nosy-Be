@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Menu & Plats du Restaurant</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Catalogue des Plats</h2>
+        <a th:href="@{/plats/recette/nouveau}" class="btn btn-success">+ Nouvelle Recette</a>
+    </div>
+
+    <!-- Barre de filtrage par Catégorie -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <label for="categoryFilter" class="col-md-3 col-form-label font-weight-bold">Filtrer par Catégorie :</label>
+                <div class="col-md-6">
+                    <select id="categoryFilter" class="form-select">
+                        <option value="ALL">-- Toutes les catégories --</option>
+                        <option th:each="cat : ${categories}" 
+                                th:value="${cat.id}" 
+                                th:text="${cat.libelle}">
+                        </option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grille des plats -->
+    <div class="row" id="platsGrid">
+        <div th:each="plat : ${plats}" class="col-md-4 mb-4 plat-card" th:data-category-id="${plat.categoriePlats.id}">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <span class="badge bg-secondary mb-2" th:text="${plat.categoriePlats.libelle}">Catégorie</span>
+                    <h5 class="card-title" th:text="${plat.nom}">Nom du Plat</h5>
+                    <p class="card-text text-muted" th:text="${plat.description}">Description...</p>
+                    <h6 class="text-primary font-weight-bold" th:text="${#numbers.formatCurrency(plat.prixVente)}">0.00 MGA</h6>
+                </div>
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-between">
+                    <a th:href="@{'/plats/detail/' + ${plat.id}}" class="btn btn-sm btn-outline-primary">Voir Recette</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script de Filtrage Dynamique côté Client -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryFilter = document.getElementById('categoryFilter');
+    const cards = document.querySelectorAll('.plat-card');
+
+    categoryFilter.addEventListener('change', function() {
+        const selectedCategoryId = this.value;
+
+        cards.forEach(card => {
+            const cardCategoryId = card.getAttribute('data-category-id');
+
+            if (selectedCategoryId === 'ALL' || cardCategoryId === selectedCategoryId) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>
