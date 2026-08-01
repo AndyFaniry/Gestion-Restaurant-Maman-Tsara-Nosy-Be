@@ -18,5 +18,5 @@ public class Unite {
     private String nom; // ex: "Gramme", "Litre", "Pièce"
 
     @Column(length = 10)
-    private String symbole; // ex: "g", "L", "pcs"<
+    private String symbole; // ex: "g", "L", "pcs"
 }

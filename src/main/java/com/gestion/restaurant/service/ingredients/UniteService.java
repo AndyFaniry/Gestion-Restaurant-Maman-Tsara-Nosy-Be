@@ -2,18 +2,20 @@ package com.gestion.restaurant.service.ingredients;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.gestion.restaurant.repository.ingredients.UniteRepository;
-import com.gestion.restaurant.entity.ingredients.Unite;;
+import com.gestion.restaurant.entity.ingredients.Unite;
 
 @Service
 public class UniteService {
-    @Autowired
-    private UniteRepository uniteRepository;
 
+    private final UniteRepository uniteRepository;
+
+    public UniteService(UniteRepository uniteRepository) {
+        this.uniteRepository = uniteRepository;
+    }
 
     @Transactional(readOnly = true)
     public List<Unite> findAllSourceApprovisionnement() {
@@ -21,26 +23,26 @@ public class UniteService {
     }
 
     @Transactional
-    private void SaveUnite(Unite unite) throws Exception {
+    public Unite saveUnite(Unite unite) {
         if (unite == null) {
-            throw new Exception("unite doit etre obligatoire");
+            throw new IllegalArgumentException("L'unité ne peut pas être nulle");
         }
-        uniteRepository.save(unite);
+        return uniteRepository.save(unite);
     }
 
-    public static Double KgtoG(double kg) {
+    public static Double kgToG(double kg) {
         return kg * 1000;
     }
 
-    public static Double GtoKg(double g) {
+    public static Double gToKg(double g) {
         return g / 1000;
     }
 
-    public static Double LtoMl(double l) {
+    public static Double lToMl(double l) {
         return l * 1000;
     }
 
-    public static Double MltoL(double ml) {
+    public static Double mlToL(double ml) {
         return ml / 1000;
     }
 }

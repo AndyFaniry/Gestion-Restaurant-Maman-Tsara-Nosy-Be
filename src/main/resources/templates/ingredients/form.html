@@ -1,70 +1,64 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>Formulaire Ingrédient</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1 th:text="${ingredient.id == null ? 'Ajouter un Ingrédient' : &quot;Modifier l'Ingrédient&quot;}">Ingrédient</h1>
-            </header>
+<body class="bg-light">
+<div class="container mt-4" style="max-width: 600px;">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h1 th:text="${ingredient.id == null} ? 'Ajouter un Ingrédient' : |Modifier l'Ingrédient|">Titre</h1>
+        </div>
+        <div class="card-body">
+            <form th:action="@{/ingredients/save}" method="post" th:object="${ingredient}">
+                <input type="hidden" th:field="*{id}" />
 
-            <section class="form-container">
-                <form th:action="@{/ingredients/save}" th:object="${ingredient}" method="post" class="custom-form">
-                    <input type="hidden" th:field="*{id}" />
+                <div class="mb-3">
+                    <label class="form-label">Nom de l'ingrédient</label>
+                    <input type="text" th:field="*{nom}" class="form-control" required placeholder="Ex: Farine, Huile...">
+                </div>
 
-                    <!-- Nom de l'ingrédient -->
-                    <div class="form-group">
-                        <label>Nom de l'ingrédient :</label>
-                        <input type="text" th:field="*{nom}" required class="form-control" />
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Catégorie</label>
+                    <select th:field="*{idCategorie}" class="form-select" required>
+                        <option value="">-- Sélectionner une catégorie --</option>
+                        <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.libelle}"></option>
+                    </select>
+                </div>
 
-                    <!-- Catégorie -->
-                    <div class="form-group">
-                        <label>Catégorie :</label>
-                        <select th:field="*{categorieIngredients}" class="form-control" required>
-                            <option value="">-- Sélectionner une catégorie --</option>
-                            <option th:each="cat : ${categories}" 
-                                    th:value="${cat.id}" 
-                                    th:text="${cat.libelle}">
-                            </option>
-                        </select>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Statut</label>
+                    <select th:field="*{idStatut}" class="form-select" required>
+                        <option value="">-- Sélectionner un statut --</option>
+                        <option th:each="st : ${statuts}" th:value="${st.id}" th:text="${st.libelle}"></option>
+                    </select>
+                </div>
 
-                    <!-- Statut -->
-                    <div class="form-group">
-                        <label>Statut :</label>
-                        <select th:field="*{statutIngredient}" class="form-control" required>
-                            <option value="">-- Sélectionner un statut --</option>
-                            <option th:each="st : ${statuts}" 
-                                    th:value="${st.id}" 
-                                    th:text="${st.libelle}">
-                            </option>
-                        </select>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Fournisseur</label>
+                    <select th:field="*{idFournisseur}" class="form-select" required>
+                        <option value="">-- Sélectionner un fournisseur --</option>
+                        <option th:each="f : ${fournisseurs}" th:value="${f.id}" th:text="${f.nom + ' ' + f.prenom}"></option>
+                    </select>
+                </div>
 
-                    <!-- Fournisseur -->
-                    <div class="form-group">
-                        <label>Fournisseur :</label>
-                        <select th:field="*{fournisseur}" class="form-control" required>
-                            <option value="">-- Sélectionner un fournisseur --</option>
-                            <option th:each="f : ${fournisseurs}" 
-                                    th:value="${f.id}" 
-                                    th:text="${f.nom + ' ' + f.prenom}">
-                            </option>
-                        </select>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Unité de mesure</label>
+                    <select th:field="*{idUnite}" class="form-select" required>
+                        <option value="">-- Sélectionner une unité --</option>
+                        <option th:each="u : ${unites}" th:value="${u.id}" th:text="${u.nom + ' (' + u.symbole + ')'}"></option>
+                    </select>
+                </div>
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
-                        <a th:href="@{/ingredients}" class="btn btn-secondary">Annuler</a>
-                    </div>
-                </form>
-            </section>
-        </main>
+                <div class="d-flex justify-content-between mt-4">
+                    <a th:href="@{/ingredients}" class="btn btn-secondary">Annuler</a>
+                    <button type="submit" class="btn btn-success">Enregistrer</button>
+                </div>
+            </form>
+        </div>
     </div>
+</div>
 </body>
 </html>
