@@ -16,7 +16,7 @@ public class MaintenanceMaterielles {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "idmateriel", nullable = false)
+    @JoinColumn(name = "idmaterielles")
     private Materielles materiel;
 
     @Column(name = "datemaintenance", nullable = false)

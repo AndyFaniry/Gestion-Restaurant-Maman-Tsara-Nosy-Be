@@ -110,6 +110,8 @@ CREATE TABLE HistoriqueMaterielles(
     dateEntree Date NOT NULL,
     prixAchat DECIMAL(16, 3) NOT NULL CHECK (prixAchat >= 0),
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    idFournisseur INT,
+    Foreign KEY (idFournisseur) REFERENCES Fournisseurs(id),
     Foreign KEY (idMaterielles) REFERENCES Materielles(id)
 );
 CREATE TABLE TypeMvtMaterielles(
@@ -130,6 +132,16 @@ CREATE TABLE EtatStockMaterielles(
     idMaterielles INT NOT NULL,
     dateEtatStock Date NOT NULL,
     quantite DECIMAL(16, 3) NOT NULL CHECK(quantite > 0),
+    Foreign KEY (idMaterielles) REFERENCES Materielles(id)
+);
+
+CREATE TABLE MaintenanceMaterielles(
+    id SERIAL PRIMARY KEY,
+    idMaterielles INT NOT NULL,
+    dateMaintenance Date NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    cout DECIMAL(16, 3) NOT NULL CHECK (cout >= 0),
+    technicien VARCHAR(100),
     Foreign KEY (idMaterielles) REFERENCES Materielles(id)
 );
 -- Personnels 

@@ -3,28 +3,29 @@ package com.gestion.restaurant.entity.materielles;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "inventairematerielles")
+@Table(name = "inventairesmaterielles")
 @Data
 @NoArgsConstructor
-public class InventaireMaterielles {
+public class InventairesMaterielles {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "idmateriel", nullable = false)
+    @JoinColumn(name = "idmaterielles", nullable = false)
     private Materielles materiel;
 
-    @Column(name = "datemouvement", nullable = false)
-    private LocalDate dateMouvement;
+    @Column(name = "dateinventaire", nullable = false)
+    private LocalDate dateInventaire;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
 
     @ManyToOne
     @JoinColumn(name = "typemvtmaterielles", nullable = false)
     private TypeMvtMaterielles typeMvtMaterielles;
-
-    @Column(length = 255)
-    private String commentaire;
 }

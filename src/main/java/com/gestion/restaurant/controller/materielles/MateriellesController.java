@@ -22,8 +22,8 @@ public class MateriellesController {
 
     @GetMapping
     public String listMaterielles(@RequestParam(value = "categorie", required = false) Long idCategorie,
-                                   @RequestParam(value = "statut", required = false) Long idStatut,
-                                   Model model) {
+            @RequestParam(value = "statut", required = false) Long idStatut,
+            Model model) {
         model.addAttribute("materiellesList", materiellesService.findAllFiltered(idCategorie, idStatut));
         model.addAttribute("categories", materiellesService.findAllCategories());
         model.addAttribute("statuts", materiellesService.findAllStatuts());
@@ -60,7 +60,8 @@ public class MateriellesController {
         return "redirect:/materielles";
     }
 
-    // ───────────────────────── Fiche détail : historique / maintenance / inventaire ─────────────────────────
+    // ───────────────────────── Fiche détail : historique / maintenance /
+    // inventaire ─────────────────────────
 
     @GetMapping("/{id}/detail")
     public String detail(@PathVariable("id") Long id, Model model) {
@@ -68,26 +69,27 @@ public class MateriellesController {
         model.addAttribute("historiqueList", materiellesService.findHistorique(id));
         model.addAttribute("maintenancesList", materiellesService.findMaintenances(id));
         model.addAttribute("inventaireList", materiellesService.findInventaire(id));
+        model.addAttribute("stockActuel", materiellesService.getStockActuel(id));
         model.addAttribute("fournisseurs", materiellesService.findAllFournisseurs());
         return "materielles/detail";
     }
 
     @PostMapping("/{id}/historique/save")
     public String saveAchat(@PathVariable("id") Long id,
-                             @RequestParam("quantite") BigDecimal quantite,
-                             @RequestParam("prixAchat") BigDecimal prixAchat,
-                             @RequestParam(value = "idFournisseur", required = false) Long idFournisseur,
-                             @RequestParam("dateAchat") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateAchat) {
-        materiellesService.enregistrerAchat(id, dateAchat, quantite, prixAchat, idFournisseur);
+            @RequestParam("quantite") BigDecimal quantite,
+            @RequestParam("prixAchat") BigDecimal prixAchat,
+            @RequestParam(value = "idFournisseur", required = false) Long idFournisseur,
+            @RequestParam("dateEntree") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateEntree) {
+        materiellesService.enregistrerAchat(id, dateEntree, quantite, prixAchat, idFournisseur);
         return "redirect:/materielles/" + id + "/detail";
     }
 
     @PostMapping("/{id}/maintenance/save")
     public String saveMaintenance(@PathVariable("id") Long id,
-                                   @RequestParam("description") String description,
-                                   @RequestParam("cout") BigDecimal cout,
-                                   @RequestParam(value = "technicien", required = false) String technicien,
-                                   @RequestParam("dateMaintenance") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateMaintenance) {
+            @RequestParam("description") String description,
+            @RequestParam("cout") BigDecimal cout,
+            @RequestParam(value = "technicien", required = false) String technicien,
+            @RequestParam("dateMaintenance") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateMaintenance) {
         materiellesService.enregistrerMaintenance(id, dateMaintenance, description, cout, technicien);
         return "redirect:/materielles/" + id + "/detail";
     }
@@ -97,4 +99,6 @@ public class MateriellesController {
         materiellesService.mettreHorsService(id);
         return "redirect:/materielles/" + id + "/detail";
     }
+
+
 }

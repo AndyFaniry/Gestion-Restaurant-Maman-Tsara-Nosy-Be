@@ -41,20 +41,19 @@ JOIN categoriematerielles c ON c.id = m.idcategoriematerielles
 JOIN statutmaterielles s    ON s.id = m.idstatutmaterielles
 GROUP BY c.libelle, s.libelle
 ORDER BY c.libelle, s.libelle;
-
 CREATE OR REPLACE VIEW vue_historique_materielles AS
 SELECT
     h.id,
     m.id   AS id_materiel,
     m.nom  AS materiel,
-    h.dateachat,
+    h.dateentree,
     h.quantite,
     h.prixachat,
     (h.quantite * h.prixachat) AS montant,
     f.id   AS id_fournisseur,
     (f.nom || ' ' || f.prenom) AS fournisseur
 FROM historiquematerielles h
-JOIN materielles m ON m.id = h.idmateriel
+JOIN materielles m ON m.id = h.idmaterielles
 LEFT JOIN fournisseurs f ON f.id = h.idfournisseur;
 
 CREATE OR REPLACE VIEW vue_maintenance_materielles AS
@@ -67,15 +66,26 @@ SELECT
     mm.cout,
     mm.technicien
 FROM maintenancematerielles mm
-JOIN materielles m ON m.id = mm.idmateriel;
+JOIN materielles m ON m.id = mm.idmaterielles;
 
--- Coût total (achats + maintenance) par matériel — utile pour un futur dashboard financier
+-- Stock courant par matériel (dernière photo EtatStockMaterielles)
+CREATE OR REPLACE VIEW vue_stock_materielles AS
+SELECT DISTINCT ON (m.id)
+    m.id,
+    m.nom,
+    e.dateetatstock,
+    e.quantite AS stock_actuel
+FROM materielles m
+LEFT JOIN etatstockmaterielles e ON e.idmaterielles = m.id
+ORDER BY m.id, e.dateetatstock DESC, e.id DESC;
+
+-- Coût total (achats + maintenance) par matériel
 CREATE OR REPLACE VIEW vue_couts_materielles AS
 SELECT
     m.id,
     m.nom,
     COALESCE(SUM(h.quantite * h.prixachat), 0) AS total_achats,
-    COALESCE((SELECT SUM(mm.cout) FROM maintenancematerielles mm WHERE mm.idmateriel = m.id), 0) AS total_maintenance
+    COALESCE((SELECT SUM(mm.cout) FROM maintenancematerielles mm WHERE mm.idmaterielles = m.id), 0) AS total_maintenance
 FROM materielles m
-LEFT JOIN historiquematerielles h ON h.idmateriel = m.id
+LEFT JOIN historiquematerielles h ON h.idmaterielles = m.id
 GROUP BY m.id, m.nom;

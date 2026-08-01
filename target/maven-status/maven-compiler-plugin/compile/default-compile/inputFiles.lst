@@ -28,8 +28,9 @@
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/ingredients/Unite.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/livraisons/ZonesLivraison.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/materielles/CategorieMaterielles.java
+/home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/materielles/EtatStockMaterielles.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/materielles/HistoriqueMaterielles.java
-/home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/materielles/InventaireMaterielles.java
+/home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/materielles/InventairesMaterielles.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/materielles/MaintenanceMaterielles.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/materielles/Materielles.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/entity/materielles/StatutMaterielles.java
@@ -59,8 +60,9 @@
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/ingredients/UniteRepository.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/livraisons/ZonesLivraisonRepository.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/materielles/CategorieMateriellesRepository.java
+/home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/materielles/EtatStockMateriellesRepository.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/materielles/HistoriqueMateriellesRepository.java
-/home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/materielles/InventaireMateriellesRepository.java
+/home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/materielles/InventairesMateriellesRepository.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/materielles/MaintenanceMateriellesRepository.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/materielles/MateriellesRepository.java
 /home/andrianandrainy/Documents/projet-vacance/Gestion-Restaurant-Maman-Tsara-Nosy-Be/src/main/java/com/gestion/restaurant/repository/materielles/StatutMateriellesRepository.java

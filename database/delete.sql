@@ -1,4 +1,6 @@
 -- Script pour supprimer définitivement toutes les tables du restaurant
+DROP TABLE IF EXISTS Unite CASCADE;
+DROP TABLE IF EXISTS MaintenanceMaterielles CASCADE;
 DROP TABLE IF EXISTS FacturesCommandes CASCADE;
 DROP TABLE IF EXISTS DetailsCommandes CASCADE;
 DROP TABLE IF EXISTS Commandes CASCADE;
@@ -39,3 +41,4 @@ DROP TABLE IF EXISTS HistoriqueMaterielles CASCADE;
 DROP TABLE IF EXISTS Materielles CASCADE;
 DROP TABLE IF EXISTS StatutMaterielles CASCADE;
 DROP TABLE IF EXISTS CategorieMaterielles CASCADE;
+DROP TABLE IF EXISTS MouvementCaisse CASCADE;

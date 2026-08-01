@@ -15,8 +15,7 @@ import java.util.List;
 @Service
 public class MateriellesService {
 
-    // Libellés de référence, créés automatiquement en base s'ils n'existent pas encore
-    public static final String STATUT_HORS_SERVICE   = "Hors service";
+    public static final String STATUT_HORS_SERVICE   = "Hors Service";
     public static final String STATUT_EN_MAINTENANCE = "En maintenance";
     public static final String MVT_ENTREE       = "Entree";
     public static final String MVT_MAINTENANCE  = "Maintenance";
@@ -27,7 +26,8 @@ public class MateriellesService {
     private final StatutMateriellesRepository statutMateriellesRepository;
     private final HistoriqueMateriellesRepository historiqueMateriellesRepository;
     private final MaintenanceMateriellesRepository maintenanceMateriellesRepository;
-    private final InventaireMateriellesRepository inventaireMateriellesRepository;
+    private final InventairesMateriellesRepository inventairesMateriellesRepository;
+    private final EtatStockMateriellesRepository etatStockMateriellesRepository;
     private final TypeMvtMateriellesRepository typeMvtMateriellesRepository;
     private final CaisseService caisseService;
     private final FournisseursService fournisseursService;
@@ -37,7 +37,8 @@ public class MateriellesService {
                                StatutMateriellesRepository statutMateriellesRepository,
                                HistoriqueMateriellesRepository historiqueMateriellesRepository,
                                MaintenanceMateriellesRepository maintenanceMateriellesRepository,
-                               InventaireMateriellesRepository inventaireMateriellesRepository,
+                               InventairesMateriellesRepository inventairesMateriellesRepository,
+                               EtatStockMateriellesRepository etatStockMateriellesRepository,
                                TypeMvtMateriellesRepository typeMvtMateriellesRepository,
                                CaisseService caisseService,
                                FournisseursService fournisseursService) {
@@ -46,7 +47,8 @@ public class MateriellesService {
         this.statutMateriellesRepository = statutMateriellesRepository;
         this.historiqueMateriellesRepository = historiqueMateriellesRepository;
         this.maintenanceMateriellesRepository = maintenanceMateriellesRepository;
-        this.inventaireMateriellesRepository = inventaireMateriellesRepository;
+        this.inventairesMateriellesRepository = inventairesMateriellesRepository;
+        this.etatStockMateriellesRepository = etatStockMateriellesRepository;
         this.typeMvtMateriellesRepository = typeMvtMateriellesRepository;
         this.caisseService = caisseService;
         this.fournisseursService = fournisseursService;
@@ -89,10 +91,6 @@ public class MateriellesService {
         return fournisseursService.findAll();
     }
 
-    /**
-     * Crée ou met à jour la fiche du matériel. A la création, journalise
-     * automatiquement une entrée dans l'inventaire (mouvement "Entree").
-     */
     @Transactional
     public Materielles save(Materielles materiel) {
         if (materiel.getNom() == null || materiel.getNom().isBlank()) {
@@ -107,14 +105,9 @@ public class MateriellesService {
         if (materiel.getDateEntree() == null) {
             materiel.setDateEntree(LocalDate.now());
         }
-
-        boolean estNouveau = materiel.getId() == null;
-        Materielles enregistre = materiellesRepository.save(materiel);
-
-        if (estNouveau) {
-            enregistrerMouvement(enregistre, MVT_ENTREE, "Entrée en inventaire");
-        }
-        return enregistre;
+        // Pas de mouvement de stock ici : la fiche matériel ne porte pas de quantité.
+        // Le stock démarre uniquement via un achat (enregistrerAchat), comme pour les ingrédients.
+        return materiellesRepository.save(materiel);
     }
 
     @Transactional
@@ -122,20 +115,38 @@ public class MateriellesService {
         materiellesRepository.deleteById(id);
     }
 
+    // ───────────────────────── Stock courant (EtatStockMaterielles) ─────────────────────────
+
+    @Transactional(readOnly = true)
+    public BigDecimal getStockActuel(Long idMateriel) {
+        return etatStockMateriellesRepository.findTopByMateriel_IdOrderByDateEtatStockDescIdDesc(idMateriel)
+                .map(EtatStockMaterielles::getQuantite)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    private void enregistrerSnapshotStock(Materielles materiel, BigDecimal nouvelleQuantite, LocalDate date) {
+        EtatStockMaterielles snapshot = new EtatStockMaterielles();
+        snapshot.setMateriel(materiel);
+        snapshot.setDateEtatStock(date != null ? date : LocalDate.now());
+        snapshot.setQuantite(nouvelleQuantite);
+        etatStockMateriellesRepository.save(snapshot);
+    }
+
     // ───────────────────────── Historique des achats (suivi prix) ─────────────────────────
 
     @Transactional(readOnly = true)
     public List<HistoriqueMaterielles> findHistorique(Long idMateriel) {
-        return historiqueMateriellesRepository.findByMateriel_IdOrderByDateAchatDesc(idMateriel);
+        return historiqueMateriellesRepository.findByMateriel_IdOrderByDateEntreeDesc(idMateriel);
     }
 
     /**
      * Enregistre un achat de matériel : trace le prix payé (HistoriqueMaterielles),
-     * journalise le mouvement (InventaireMaterielles) et génère automatiquement
-     * une sortie de caisse (MouvementCaisse :: Sortie) pour quantite * prixAchat.
+     * journalise le mouvement (InventairesMaterielles), met à jour le stock courant
+     * (EtatStockMaterielles) et génère automatiquement une sortie de caisse
+     * (MouvementCaisse :: Sortie) pour quantite * prixAchat.
      */
     @Transactional
-    public HistoriqueMaterielles enregistrerAchat(Long idMateriel, LocalDate dateAchat,
+    public HistoriqueMaterielles enregistrerAchat(Long idMateriel, LocalDate dateEntree,
                                                    BigDecimal quantite, BigDecimal prixAchat,
                                                    Long idFournisseur) {
         Materielles materiel = findById(idMateriel);
@@ -143,13 +154,14 @@ public class MateriellesService {
         if (quantite == null || quantite.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("La quantité achetée doit être positive");
         }
-        if (prixAchat == null || prixAchat.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Le prix d'achat doit être positif");
+        if (prixAchat == null || prixAchat.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le prix d'achat doit être positif ou nul");
         }
+        LocalDate date = dateEntree != null ? dateEntree : LocalDate.now();
 
         HistoriqueMaterielles historique = new HistoriqueMaterielles();
         historique.setMateriel(materiel);
-        historique.setDateAchat(dateAchat != null ? dateAchat : LocalDate.now());
+        historique.setDateEntree(date);
         historique.setQuantite(quantite);
         historique.setPrixAchat(prixAchat);
         if (idFournisseur != null) {
@@ -157,10 +169,15 @@ public class MateriellesService {
         }
         HistoriqueMaterielles enregistre = historiqueMateriellesRepository.save(historique);
 
-        enregistrerMouvement(materiel, MVT_ENTREE, "Achat : " + quantite + " x " + prixAchat + " Ar");
+        enregistrerMouvement(materiel, MVT_ENTREE, quantite, date);
+
+        BigDecimal nouveauStock = getStockActuel(idMateriel).add(quantite);
+        enregistrerSnapshotStock(materiel, nouveauStock, date);
 
         BigDecimal montantTotal = quantite.multiply(prixAchat);
-        caisseService.enregistrerSortie(montantTotal, historique.getDateAchat());
+        if (montantTotal.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(montantTotal, date);
+        }
 
         return enregistre;
     }
@@ -174,8 +191,9 @@ public class MateriellesService {
 
     /**
      * Enregistre une opération de maintenance : passe le matériel en statut
-     * "En maintenance", journalise le mouvement et génère automatiquement
-     * une sortie de caisse (MouvementCaisse :: Sortie) pour le coût de l'intervention.
+     * "En maintenance", journalise le mouvement (quantité symbolique = 1,
+     * la maintenance ne modifie pas le stock physique) et génère
+     * automatiquement une sortie de caisse pour le coût de l'intervention.
      */
     @Transactional
     public MaintenanceMaterielles enregistrerMaintenance(Long idMateriel, LocalDate dateMaintenance,
@@ -186,13 +204,14 @@ public class MateriellesService {
         if (description == null || description.isBlank()) {
             throw new IllegalArgumentException("La description de la maintenance est obligatoire");
         }
-        if (cout == null || cout.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Le coût de la maintenance doit être positif");
+        if (cout == null || cout.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le coût de la maintenance doit être positif ou nul");
         }
+        LocalDate date = dateMaintenance != null ? dateMaintenance : LocalDate.now();
 
         MaintenanceMaterielles maintenance = new MaintenanceMaterielles();
         maintenance.setMateriel(materiel);
-        maintenance.setDateMaintenance(dateMaintenance != null ? dateMaintenance : LocalDate.now());
+        maintenance.setDateMaintenance(date);
         maintenance.setDescription(description);
         maintenance.setCout(cout);
         maintenance.setTechnicien(technicien);
@@ -201,37 +220,60 @@ public class MateriellesService {
         materiel.setStatutMaterielles(findOrCreateStatut(STATUT_EN_MAINTENANCE));
         materiellesRepository.save(materiel);
 
-        enregistrerMouvement(materiel, MVT_MAINTENANCE, description);
-        caisseService.enregistrerSortie(cout, maintenance.getDateMaintenance());
+        enregistrerMouvement(materiel, MVT_MAINTENANCE, BigDecimal.ONE, date);
+
+        if (cout.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(cout, date);
+        }
 
         return enregistre;
     }
 
     // ───────────────────────── Mise hors service ─────────────────────────
 
+    /**
+     * Déclare le matériel hors service : journalise le mouvement (la quantité
+     * sortie = le stock actuellement détenu) et remet le stock courant à 0.
+     */
+/**
+     * Déclare le matériel hors service : journalise le mouvement de sortie
+     * (quantité = le stock actuellement détenu, garantie > 0). On n'insère
+     * PAS de photo de stock à 0 dans EtatStockMaterielles, car cette table
+     * impose CHECK(quantite > 0) — l'absence de nouvelle photo signifie
+     * "plus de mouvement depuis la dernière entrée", et le statut du
+     * matériel (Hors service) fait foi pour l'affichage.
+     */
     @Transactional
     public Materielles mettreHorsService(Long idMateriel) {
         Materielles materiel = findById(idMateriel);
+        LocalDate date = LocalDate.now();
+
+        BigDecimal stockActuel = getStockActuel(idMateriel);
+        BigDecimal quantiteSortie = stockActuel.compareTo(BigDecimal.ZERO) > 0 ? stockActuel : BigDecimal.ONE;
+
         materiel.setStatutMaterielles(findOrCreateStatut(STATUT_HORS_SERVICE));
         Materielles enregistre = materiellesRepository.save(materiel);
-        enregistrerMouvement(enregistre, MVT_HORS_SERVICE, "Matériel déclaré hors service");
+
+        enregistrerMouvement(enregistre, MVT_HORS_SERVICE, quantiteSortie, date);
+        // Pas de enregistrerSnapshotStock(..., ZERO, ...) ici : contrainte CHECK(quantite > 0)
+
         return enregistre;
     }
 
-    // ───────────────────────── Inventaire (journal des mouvements = EtatStock) ─────────────────────────
+    // ───────────────────────── Inventaire (journal des mouvements) ─────────────────────────
 
     @Transactional(readOnly = true)
-    public List<InventaireMaterielles> findInventaire(Long idMateriel) {
-        return inventaireMateriellesRepository.findByMateriel_IdOrderByDateMouvementDesc(idMateriel);
+    public List<InventairesMaterielles> findInventaire(Long idMateriel) {
+        return inventairesMateriellesRepository.findByMateriel_IdOrderByDateInventaireDesc(idMateriel);
     }
 
-    private void enregistrerMouvement(Materielles materiel, String typeLibelle, String commentaire) {
-        InventaireMaterielles mouvement = new InventaireMaterielles();
+    private void enregistrerMouvement(Materielles materiel, String typeLibelle, BigDecimal quantite, LocalDate date) {
+        InventairesMaterielles mouvement = new InventairesMaterielles();
         mouvement.setMateriel(materiel);
-        mouvement.setDateMouvement(LocalDate.now());
+        mouvement.setDateInventaire(date != null ? date : LocalDate.now());
+        mouvement.setQuantite(quantite);
         mouvement.setTypeMvtMaterielles(findOrCreateTypeMvt(typeLibelle));
-        mouvement.setCommentaire(commentaire);
-        inventaireMateriellesRepository.save(mouvement);
+        inventairesMateriellesRepository.save(mouvement);
     }
 
     private StatutMaterielles findOrCreateStatut(String libelle) {

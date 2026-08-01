@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface HistoriqueMateriellesRepository extends JpaRepository<HistoriqueMaterielles, Long> {
-    List<HistoriqueMaterielles> findByMateriel_IdOrderByDateAchatDesc(Long idMateriel);
+    List<HistoriqueMaterielles> findByMateriel_IdOrderByDateEntreeDesc(Long idMateriel);
 }

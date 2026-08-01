@@ -25,7 +25,7 @@
 
       <!-- Infos générales -->
       <div class="card" style="margin-bottom: 20px;">
-        <div class="form-grid cols-3">
+        <div class="form-grid cols-4">
           <div>
             <div class="field-label">Catégorie</div>
             <div th:text="${materiel.categorieMaterielles != null ? materiel.categorieMaterielles.libelle : 'N/A'}">Catégorie</div>
@@ -37,6 +37,10 @@
           <div>
             <div class="field-label">Date d'entrée</div>
             <div th:text="${#temporals.format(materiel.dateEntree, 'dd/MM/yyyy')}">01/01/2026</div>
+          </div>
+          <div>
+            <div class="field-label">Stock actuel</div>
+            <div th:text="${materiel.statutMaterielles != null and materiel.statutMaterielles.libelle == 'Hors Service' ? 0 : stockActuel}">0</div>
           </div>
         </div>
       </div>
@@ -51,7 +55,7 @@
               class="form-grid cols-3" style="margin-bottom: 20px;">
           <div class="field-group">
             <label class="field-label">Date d'achat <span class="required">*</span></label>
-            <input type="date" name="dateAchat" required />
+            <input type="date" name="dateEntree" required />
           </div>
           <div class="field-group">
             <label class="field-label">Quantité <span class="required">*</span></label>
@@ -79,7 +83,7 @@
           </thead>
           <tbody>
             <tr th:each="h : ${historiqueList}">
-              <td th:text="${#temporals.format(h.dateAchat, 'dd/MM/yyyy')}">01/01/2026</td>
+              <td th:text="${#temporals.format(h.dateEntree, 'dd/MM/yyyy')}">01/01/2026</td>
               <td th:text="${h.quantite}">1</td>
               <td th:text="${h.prixAchat} + ' Ar'">0 Ar</td>
               <td th:text="${h.quantite * h.prixAchat} + ' Ar'">0 Ar</td>
@@ -139,20 +143,20 @@
         </table>
       </div>
 
-      <!-- Journal des mouvements -->
+<!-- Journal des mouvements -->
       <div class="card">
         <div class="card-header">
           <div class="card-title">Journal des mouvements (Inventaire)</div>
         </div>
         <table>
           <thead>
-            <tr><th>Date</th><th>Type</th><th>Commentaire</th></tr>
+            <tr><th>Date</th><th>Type</th><th>Quantité</th></tr>
           </thead>
           <tbody>
             <tr th:each="i : ${inventaireList}">
-              <td th:text="${#temporals.format(i.dateMouvement, 'dd/MM/yyyy')}">01/01/2026</td>
+              <td th:text="${#temporals.format(i.dateInventaire, 'dd/MM/yyyy')}">01/01/2026</td>
               <td th:text="${i.typeMvtMaterielles != null ? i.typeMvtMaterielles.libelle : 'N/A'}">Type</td>
-              <td th:text="${i.commentaire != null ? i.commentaire : '-'}">-</td>
+              <td th:text="${i.quantite}">1</td>
             </tr>
             <tr th:if="${inventaireList.isEmpty()}">
               <td colspan="3" style="text-align:center; color: var(--c-muted); padding: 18px;">Aucun mouvement enregistré</td>

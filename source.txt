@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : ven. 31 juil. 2026 23:09:17 EAT
+Date : sam. 01 août 2026 18:49:55 EAT
 
 
 ======================================
@@ -429,9 +429,13 @@ package com.gestion.restaurant.controller.materielles;
 
 import com.gestion.restaurant.entity.materielles.Materielles;
 import com.gestion.restaurant.service.materielles.MateriellesService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Controller
 @RequestMapping("/materielles")
@@ -445,8 +449,8 @@ public class MateriellesController {
 
     @GetMapping
     public String listMaterielles(@RequestParam(value = "categorie", required = false) Long idCategorie,
-                                   @RequestParam(value = "statut", required = false) Long idStatut,
-                                   Model model) {
+            @RequestParam(value = "statut", required = false) Long idStatut,
+            Model model) {
         model.addAttribute("materiellesList", materiellesService.findAllFiltered(idCategorie, idStatut));
         model.addAttribute("categories", materiellesService.findAllCategories());
         model.addAttribute("statuts", materiellesService.findAllStatuts());
@@ -465,8 +469,8 @@ public class MateriellesController {
 
     @PostMapping("/save")
     public String saveMateriel(@ModelAttribute("materiel") Materielles materiel) {
-        materiellesService.save(materiel);
-        return "redirect:/materielles";
+        Materielles enregistre = materiellesService.save(materiel);
+        return "redirect:/materielles/" + enregistre.getId() + "/detail";
     }
 
     @GetMapping("/edit/{id}")
@@ -482,6 +486,48 @@ public class MateriellesController {
         materiellesService.deleteById(id);
         return "redirect:/materielles";
     }
+
+    // ───────────────────────── Fiche détail : historique / maintenance /
+    // inventaire ─────────────────────────
+
+    @GetMapping("/{id}/detail")
+    public String detail(@PathVariable("id") Long id, Model model) {
+        model.addAttribute("materiel", materiellesService.findById(id));
+        model.addAttribute("historiqueList", materiellesService.findHistorique(id));
+        model.addAttribute("maintenancesList", materiellesService.findMaintenances(id));
+        model.addAttribute("inventaireList", materiellesService.findInventaire(id));
+        model.addAttribute("stockActuel", materiellesService.getStockActuel(id));
+        model.addAttribute("fournisseurs", materiellesService.findAllFournisseurs());
+        return "materielles/detail";
+    }
+
+    @PostMapping("/{id}/historique/save")
+    public String saveAchat(@PathVariable("id") Long id,
+            @RequestParam("quantite") BigDecimal quantite,
+            @RequestParam("prixAchat") BigDecimal prixAchat,
+            @RequestParam(value = "idFournisseur", required = false) Long idFournisseur,
+            @RequestParam("dateEntree") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateEntree) {
+        materiellesService.enregistrerAchat(id, dateEntree, quantite, prixAchat, idFournisseur);
+        return "redirect:/materielles/" + id + "/detail";
+    }
+
+    @PostMapping("/{id}/maintenance/save")
+    public String saveMaintenance(@PathVariable("id") Long id,
+            @RequestParam("description") String description,
+            @RequestParam("cout") BigDecimal cout,
+            @RequestParam(value = "technicien", required = false) String technicien,
+            @RequestParam("dateMaintenance") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateMaintenance) {
+        materiellesService.enregistrerMaintenance(id, dateMaintenance, description, cout, technicien);
+        return "redirect:/materielles/" + id + "/detail";
+    }
+
+    @GetMapping("/{id}/hors-service")
+    public String horsService(@PathVariable("id") Long id) {
+        materiellesService.mettreHorsService(id);
+        return "redirect:/materielles/" + id + "/detail";
+    }
+
+
 }
 
 ======================================
@@ -1174,6 +1220,148 @@ public class CategorieMaterielles {
 
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/entity/materielles/EtatStockMaterielles.java
+======================================
+package com.gestion.restaurant.entity.materielles;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "etatstockmaterielles")
+@Data
+@NoArgsConstructor
+public class EtatStockMaterielles {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idmaterielles", nullable = false)
+    private Materielles materiel;
+
+    @Column(name = "dateetatstock", nullable = false)
+    private LocalDate dateEtatStock;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/materielles/HistoriqueMaterielles.java
+======================================
+package com.gestion.restaurant.entity.materielles;
+
+import com.gestion.restaurant.entity.fournisseurs.Fournisseurs;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "historiquematerielles")
+@Data
+@NoArgsConstructor
+public class HistoriqueMaterielles {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idmaterielles", nullable = false)
+    private Materielles materiel;
+
+    @Column(name = "dateentree", nullable = false)
+    private LocalDate dateEntree;
+
+    @Column(name = "prixachat", nullable = false, precision = 16, scale = 3)
+    private BigDecimal prixAchat;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
+
+    @ManyToOne
+    @JoinColumn(name = "idfournisseur")
+    private Fournisseurs fournisseur; // nullable, comme dans le script SQL
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/materielles/InventairesMaterielles.java
+======================================
+package com.gestion.restaurant.entity.materielles;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "inventairesmaterielles")
+@Data
+@NoArgsConstructor
+public class InventairesMaterielles {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idmaterielles", nullable = false)
+    private Materielles materiel;
+
+    @Column(name = "dateinventaire", nullable = false)
+    private LocalDate dateInventaire;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
+
+    @ManyToOne
+    @JoinColumn(name = "typemvtmaterielles", nullable = false)
+    private TypeMvtMaterielles typeMvtMaterielles;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/materielles/MaintenanceMaterielles.java
+======================================
+package com.gestion.restaurant.entity.materielles;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "maintenancematerielles")
+@Data
+@NoArgsConstructor
+public class MaintenanceMaterielles {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idmaterielles")
+    private Materielles materiel;
+
+    @Column(name = "datemaintenance", nullable = false)
+    private LocalDate dateMaintenance;
+
+    @Column(nullable = false, length = 255)
+    private String description;
+
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal cout;
+
+    @Column(length = 100)
+    private String technicien;
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/entity/materielles/Materielles.java
 ======================================
 package com.gestion.restaurant.entity.materielles;
@@ -1231,6 +1419,28 @@ public class StatutMaterielles {
     private String libelle;
 }
 
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/materielles/TypeMvtMaterielles.java
+======================================
+package com.gestion.restaurant.entity.materielles;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "typemvtmaterielles")
+@Data
+@NoArgsConstructor
+public class TypeMvtMaterielles {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String libelle; // Entree, Maintenance, HorsService
+}
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/entity/personnels/FichePaie.java
@@ -1439,10 +1649,12 @@ import com.gestion.restaurant.entity.caisse.TypeMouvementCaisse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface TypeMouvementCaisseRepository extends JpaRepository<TypeMouvementCaisse, Long> {
+    Optional<TypeMouvementCaisse> findByLibelle(String libelle);
 }
-
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/clients/ClientsRepository.java
@@ -1682,6 +1894,72 @@ public interface CategorieMateriellesRepository extends JpaRepository<CategorieM
 
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/repository/materielles/EtatStockMateriellesRepository.java
+======================================
+package com.gestion.restaurant.repository.materielles;
+
+import com.gestion.restaurant.entity.materielles.EtatStockMaterielles;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface EtatStockMateriellesRepository extends JpaRepository<EtatStockMaterielles, Long> {
+    List<EtatStockMaterielles> findByMateriel_IdOrderByDateEtatStockDesc(Long idMateriel);
+    Optional<EtatStockMaterielles> findTopByMateriel_IdOrderByDateEtatStockDescIdDesc(Long idMateriel);
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/repository/materielles/HistoriqueMateriellesRepository.java
+======================================
+package com.gestion.restaurant.repository.materielles;
+
+import com.gestion.restaurant.entity.materielles.HistoriqueMaterielles;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface HistoriqueMateriellesRepository extends JpaRepository<HistoriqueMaterielles, Long> {
+    List<HistoriqueMaterielles> findByMateriel_IdOrderByDateEntreeDesc(Long idMateriel);
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/repository/materielles/InventairesMateriellesRepository.java
+======================================
+package com.gestion.restaurant.repository.materielles;
+
+import com.gestion.restaurant.entity.materielles.InventairesMaterielles;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface InventairesMateriellesRepository extends JpaRepository<InventairesMaterielles, Long> {
+    List<InventairesMaterielles> findByMateriel_IdOrderByDateInventaireDesc(Long idMateriel);
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/repository/materielles/MaintenanceMateriellesRepository.java
+======================================
+package com.gestion.restaurant.repository.materielles;
+
+import com.gestion.restaurant.entity.materielles.MaintenanceMaterielles;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface MaintenanceMateriellesRepository extends JpaRepository<MaintenanceMaterielles, Long> {
+    List<MaintenanceMaterielles> findByMateriel_IdOrderByDateMaintenanceDesc(Long idMateriel);
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/repository/materielles/MateriellesRepository.java
 ======================================
 package com.gestion.restaurant.repository.materielles;
@@ -1707,10 +1985,28 @@ import com.gestion.restaurant.entity.materielles.StatutMaterielles;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface StatutMateriellesRepository extends JpaRepository<StatutMaterielles, Long> {
+    Optional<StatutMaterielles> findByLibelle(String libelle);
 }
 
+======================================
+FILE : src/main/java/com/gestion/restaurant/repository/materielles/TypeMvtMateriellesRepository.java
+======================================
+package com.gestion.restaurant.repository.materielles;
+
+import com.gestion.restaurant.entity.materielles.TypeMvtMaterielles;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface TypeMvtMateriellesRepository extends JpaRepository<TypeMvtMaterielles, Long> {
+    Optional<TypeMvtMaterielles> findByLibelle(String libelle);
+}
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/personnels/FichePaieRepository.java
@@ -1813,6 +2109,71 @@ public class RestaurantApplication {
 
 }
 
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/service/caisse/CaisseService.java
+======================================
+package com.gestion.restaurant.service.caisse;
+
+import com.gestion.restaurant.entity.caisse.MouvementCaisse;
+import com.gestion.restaurant.entity.caisse.TypeMouvementCaisse;
+import com.gestion.restaurant.repository.caisse.MouvementCaisseRepository;
+import com.gestion.restaurant.repository.caisse.TypeMouvementCaisseRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+/**
+ * Service central pour la caisse. Utilisé par d'autres modules (Materielles,
+ * bientôt Ingredients/Commandes) pour générer automatiquement des mouvements
+ * de caisse liés à leurs opérations, sans dupliquer la logique métier.
+ */
+@Service
+public class CaisseService {
+
+    public static final String TYPE_ENTREE = "Entree";
+    public static final String TYPE_SORTIE = "Sortie";
+
+    private final MouvementCaisseRepository mouvementCaisseRepository;
+    private final TypeMouvementCaisseRepository typeMouvementCaisseRepository;
+
+    public CaisseService(MouvementCaisseRepository mouvementCaisseRepository,
+                          TypeMouvementCaisseRepository typeMouvementCaisseRepository) {
+        this.mouvementCaisseRepository = mouvementCaisseRepository;
+        this.typeMouvementCaisseRepository = typeMouvementCaisseRepository;
+    }
+
+    @Transactional
+    public MouvementCaisse enregistrerSortie(BigDecimal montant, LocalDate date) {
+        return enregistrerMouvement(TYPE_SORTIE, montant, date);
+    }
+
+    @Transactional
+    public MouvementCaisse enregistrerEntree(BigDecimal montant, LocalDate date) {
+        return enregistrerMouvement(TYPE_ENTREE, montant, date);
+    }
+
+    @Transactional
+    public MouvementCaisse enregistrerMouvement(String typeLibelle, BigDecimal montant, LocalDate date) {
+        if (montant == null || montant.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Le montant du mouvement de caisse doit être positif");
+        }
+        TypeMouvementCaisse type = typeMouvementCaisseRepository.findByLibelle(typeLibelle)
+                .orElseGet(() -> {
+                    TypeMouvementCaisse t = new TypeMouvementCaisse();
+                    t.setLibelle(typeLibelle);
+                    return typeMouvementCaisseRepository.save(t);
+                });
+
+        MouvementCaisse mouvement = new MouvementCaisse();
+        mouvement.setDateMouvement(date != null ? date : LocalDate.now());
+        mouvement.setMontant(montant);
+        mouvement.setTypeMouvement(type);
+        return mouvementCaisseRepository.save(mouvement);
+    }
+}
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/service/fournisseurs/FournisseursService.java
@@ -1929,32 +2290,61 @@ FILE : src/main/java/com/gestion/restaurant/service/materielles/MateriellesServi
 ======================================
 package com.gestion.restaurant.service.materielles;
 
-import com.gestion.restaurant.entity.materielles.CategorieMaterielles;
-import com.gestion.restaurant.entity.materielles.Materielles;
-import com.gestion.restaurant.entity.materielles.StatutMaterielles;
-import com.gestion.restaurant.repository.materielles.CategorieMateriellesRepository;
-import com.gestion.restaurant.repository.materielles.MateriellesRepository;
-import com.gestion.restaurant.repository.materielles.StatutMateriellesRepository;
+import com.gestion.restaurant.entity.fournisseurs.Fournisseurs;
+import com.gestion.restaurant.entity.materielles.*;
+import com.gestion.restaurant.repository.materielles.*;
+import com.gestion.restaurant.service.caisse.CaisseService;
+import com.gestion.restaurant.service.fournisseurs.FournisseursService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
 public class MateriellesService {
 
+    public static final String STATUT_HORS_SERVICE   = "Hors service";
+    public static final String STATUT_EN_MAINTENANCE = "En maintenance";
+    public static final String MVT_ENTREE       = "Entree";
+    public static final String MVT_MAINTENANCE  = "Maintenance";
+    public static final String MVT_HORS_SERVICE = "HorsService";
+
     private final MateriellesRepository materiellesRepository;
     private final CategorieMateriellesRepository categorieMateriellesRepository;
     private final StatutMateriellesRepository statutMateriellesRepository;
+    private final HistoriqueMateriellesRepository historiqueMateriellesRepository;
+    private final MaintenanceMateriellesRepository maintenanceMateriellesRepository;
+    private final InventairesMateriellesRepository inventairesMateriellesRepository;
+    private final EtatStockMateriellesRepository etatStockMateriellesRepository;
+    private final TypeMvtMateriellesRepository typeMvtMateriellesRepository;
+    private final CaisseService caisseService;
+    private final FournisseursService fournisseursService;
 
     public MateriellesService(MateriellesRepository materiellesRepository,
                                CategorieMateriellesRepository categorieMateriellesRepository,
-                               StatutMateriellesRepository statutMateriellesRepository) {
+                               StatutMateriellesRepository statutMateriellesRepository,
+                               HistoriqueMateriellesRepository historiqueMateriellesRepository,
+                               MaintenanceMateriellesRepository maintenanceMateriellesRepository,
+                               InventairesMateriellesRepository inventairesMateriellesRepository,
+                               EtatStockMateriellesRepository etatStockMateriellesRepository,
+                               TypeMvtMateriellesRepository typeMvtMateriellesRepository,
+                               CaisseService caisseService,
+                               FournisseursService fournisseursService) {
         this.materiellesRepository = materiellesRepository;
         this.categorieMateriellesRepository = categorieMateriellesRepository;
         this.statutMateriellesRepository = statutMateriellesRepository;
+        this.historiqueMateriellesRepository = historiqueMateriellesRepository;
+        this.maintenanceMateriellesRepository = maintenanceMateriellesRepository;
+        this.inventairesMateriellesRepository = inventairesMateriellesRepository;
+        this.etatStockMateriellesRepository = etatStockMateriellesRepository;
+        this.typeMvtMateriellesRepository = typeMvtMateriellesRepository;
+        this.caisseService = caisseService;
+        this.fournisseursService = fournisseursService;
     }
+
+    // ───────────────────────── CRUD de base ─────────────────────────
 
     @Transactional(readOnly = true)
     public List<Materielles> findAllFiltered(Long idCategorie, Long idStatut) {
@@ -1986,6 +2376,11 @@ public class MateriellesService {
         return statutMateriellesRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public List<Fournisseurs> findAllFournisseurs() {
+        return fournisseursService.findAll();
+    }
+
     @Transactional
     public Materielles save(Materielles materiel) {
         if (materiel.getNom() == null || materiel.getNom().isBlank()) {
@@ -2000,6 +2395,8 @@ public class MateriellesService {
         if (materiel.getDateEntree() == null) {
             materiel.setDateEntree(LocalDate.now());
         }
+        // Pas de mouvement de stock ici : la fiche matériel ne porte pas de quantité.
+        // Le stock démarre uniquement via un achat (enregistrerAchat), comme pour les ingrédients.
         return materiellesRepository.save(materiel);
     }
 
@@ -2007,7 +2404,1001 @@ public class MateriellesService {
     public void deleteById(Long id) {
         materiellesRepository.deleteById(id);
     }
+
+    // ───────────────────────── Stock courant (EtatStockMaterielles) ─────────────────────────
+
+    @Transactional(readOnly = true)
+    public BigDecimal getStockActuel(Long idMateriel) {
+        return etatStockMateriellesRepository.findTopByMateriel_IdOrderByDateEtatStockDescIdDesc(idMateriel)
+                .map(EtatStockMaterielles::getQuantite)
+                .orElse(BigDecimal.ZERO);
+    }
+
+    private void enregistrerSnapshotStock(Materielles materiel, BigDecimal nouvelleQuantite, LocalDate date) {
+        EtatStockMaterielles snapshot = new EtatStockMaterielles();
+        snapshot.setMateriel(materiel);
+        snapshot.setDateEtatStock(date != null ? date : LocalDate.now());
+        snapshot.setQuantite(nouvelleQuantite);
+        etatStockMateriellesRepository.save(snapshot);
+    }
+
+    // ───────────────────────── Historique des achats (suivi prix) ─────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<HistoriqueMaterielles> findHistorique(Long idMateriel) {
+        return historiqueMateriellesRepository.findByMateriel_IdOrderByDateEntreeDesc(idMateriel);
+    }
+
+    /**
+     * Enregistre un achat de matériel : trace le prix payé (HistoriqueMaterielles),
+     * journalise le mouvement (InventairesMaterielles), met à jour le stock courant
+     * (EtatStockMaterielles) et génère automatiquement une sortie de caisse
+     * (MouvementCaisse :: Sortie) pour quantite * prixAchat.
+     */
+    @Transactional
+    public HistoriqueMaterielles enregistrerAchat(Long idMateriel, LocalDate dateEntree,
+                                                   BigDecimal quantite, BigDecimal prixAchat,
+                                                   Long idFournisseur) {
+        Materielles materiel = findById(idMateriel);
+
+        if (quantite == null || quantite.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("La quantité achetée doit être positive");
+        }
+        if (prixAchat == null || prixAchat.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le prix d'achat doit être positif ou nul");
+        }
+        LocalDate date = dateEntree != null ? dateEntree : LocalDate.now();
+
+        HistoriqueMaterielles historique = new HistoriqueMaterielles();
+        historique.setMateriel(materiel);
+        historique.setDateEntree(date);
+        historique.setQuantite(quantite);
+        historique.setPrixAchat(prixAchat);
+        if (idFournisseur != null) {
+            historique.setFournisseur(fournisseursService.findById(idFournisseur));
+        }
+        HistoriqueMaterielles enregistre = historiqueMateriellesRepository.save(historique);
+
+        enregistrerMouvement(materiel, MVT_ENTREE, quantite, date);
+
+        BigDecimal nouveauStock = getStockActuel(idMateriel).add(quantite);
+        enregistrerSnapshotStock(materiel, nouveauStock, date);
+
+        BigDecimal montantTotal = quantite.multiply(prixAchat);
+        if (montantTotal.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(montantTotal, date);
+        }
+
+        return enregistre;
+    }
+
+    // ───────────────────────── Maintenance ─────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<MaintenanceMaterielles> findMaintenances(Long idMateriel) {
+        return maintenanceMateriellesRepository.findByMateriel_IdOrderByDateMaintenanceDesc(idMateriel);
+    }
+
+    /**
+     * Enregistre une opération de maintenance : passe le matériel en statut
+     * "En maintenance", journalise le mouvement (quantité symbolique = 1,
+     * la maintenance ne modifie pas le stock physique) et génère
+     * automatiquement une sortie de caisse pour le coût de l'intervention.
+     */
+    @Transactional
+    public MaintenanceMaterielles enregistrerMaintenance(Long idMateriel, LocalDate dateMaintenance,
+                                                           String description, BigDecimal cout,
+                                                           String technicien) {
+        Materielles materiel = findById(idMateriel);
+
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("La description de la maintenance est obligatoire");
+        }
+        if (cout == null || cout.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Le coût de la maintenance doit être positif ou nul");
+        }
+        LocalDate date = dateMaintenance != null ? dateMaintenance : LocalDate.now();
+
+        MaintenanceMaterielles maintenance = new MaintenanceMaterielles();
+        maintenance.setMateriel(materiel);
+        maintenance.setDateMaintenance(date);
+        maintenance.setDescription(description);
+        maintenance.setCout(cout);
+        maintenance.setTechnicien(technicien);
+        MaintenanceMaterielles enregistre = maintenanceMateriellesRepository.save(maintenance);
+
+        materiel.setStatutMaterielles(findOrCreateStatut(STATUT_EN_MAINTENANCE));
+        materiellesRepository.save(materiel);
+
+        enregistrerMouvement(materiel, MVT_MAINTENANCE, BigDecimal.ONE, date);
+
+        if (cout.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(cout, date);
+        }
+
+        return enregistre;
+    }
+
+    // ───────────────────────── Mise hors service ─────────────────────────
+
+    /**
+     * Déclare le matériel hors service : journalise le mouvement (la quantité
+     * sortie = le stock actuellement détenu) et remet le stock courant à 0.
+     */
+    @Transactional
+    public Materielles mettreHorsService(Long idMateriel) {
+        Materielles materiel = findById(idMateriel);
+        LocalDate date = LocalDate.now();
+
+        BigDecimal stockActuel = getStockActuel(idMateriel);
+        BigDecimal quantiteSortie = stockActuel.compareTo(BigDecimal.ZERO) > 0 ? stockActuel : BigDecimal.ONE;
+
+        materiel.setStatutMaterielles(findOrCreateStatut(STATUT_HORS_SERVICE));
+        Materielles enregistre = materiellesRepository.save(materiel);
+
+        enregistrerMouvement(enregistre, MVT_HORS_SERVICE, quantiteSortie, date);
+        enregistrerSnapshotStock(enregistre, BigDecimal.ZERO, date);
+
+        return enregistre;
+    }
+
+    // ───────────────────────── Inventaire (journal des mouvements) ─────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<InventairesMaterielles> findInventaire(Long idMateriel) {
+        return inventairesMateriellesRepository.findByMateriel_IdOrderByDateInventaireDesc(idMateriel);
+    }
+
+    private void enregistrerMouvement(Materielles materiel, String typeLibelle, BigDecimal quantite, LocalDate date) {
+        InventairesMaterielles mouvement = new InventairesMaterielles();
+        mouvement.setMateriel(materiel);
+        mouvement.setDateInventaire(date != null ? date : LocalDate.now());
+        mouvement.setQuantite(quantite);
+        mouvement.setTypeMvtMaterielles(findOrCreateTypeMvt(typeLibelle));
+        inventairesMateriellesRepository.save(mouvement);
+    }
+
+    private StatutMaterielles findOrCreateStatut(String libelle) {
+        return statutMateriellesRepository.findByLibelle(libelle)
+                .orElseGet(() -> {
+                    StatutMaterielles s = new StatutMaterielles();
+                    s.setLibelle(libelle);
+                    return statutMateriellesRepository.save(s);
+                });
+    }
+
+    private TypeMvtMaterielles findOrCreateTypeMvt(String libelle) {
+        return typeMvtMateriellesRepository.findByLibelle(libelle)
+                .orElseGet(() -> {
+                    TypeMvtMaterielles t = new TypeMvtMaterielles();
+                    t.setLibelle(libelle);
+                    return typeMvtMateriellesRepository.save(t);
+                });
+    }
 }
+
+======================================
+FILE : database/add-column.sql
+======================================
+Voici la marche à suivre complète en SQL pour ajouter la colonne `idUnite` comme clé étrangère dans la table `Ingredients`, la remplir pour vos données existantes, puis configurer la contrainte d'intégrité référantielle.
+
+---
+
+### Étape 1 : Ajouter la nouvelle colonne `idUnite`
+
+On ajoute d'abord la colonne `idUnite` sans contrainte `NOT NULL` immédiate pour éviter tout blocage avec vos lignes d'ingrédients déjà existantes :
+
+```sql
+ALTER TABLE ingredients 
+ADD COLUMN idUnite INT;
+
+```
+
+*(Si vos ID de la table `unite` sont de type `BIGINT`, utilisez `BIGINT` à la place d' `INT`)*.
+
+---
+
+### Étape 2 : Mettre à jour (`UPDATE`) les lignes existantes
+
+Si vous avez déjà des ingrédients dans votre base, attribuez-leur un `idUnite` par défaut ou spécifique pour ne pas laisser de valeurs `NULL` indésirables :
+
+```sql
+-- Associer tous les ingrédients existants à l'unité avec l'id 1 (ex: 'Kilogramme' ou 'Pièce')
+UPDATE ingredients 
+SET idUnite = 1 
+WHERE idUnite IS NULL;
+
+-- Exemple pour cibler un ingrédient spécifique :
+-- UPDATE ingredients SET idUnite = 2 WHERE id = 5;
+
+```
+
+---
+
+### Étape 3 : Ajouter la clé étrangère (Foreign Key)
+
+Une fois la colonne créée et éventuellement mise à jour, vous pouvez lier officiellement la table `ingredients` à la table `unite` :
+
+```sql
+ALTER TABLE ingredients 
+ADD CONSTRAINT fk_ingredients_unite 
+FOREIGN KEY (idUnite) 
+REFERENCES unite(id)
+ON DELETE RESTRICT -- Empêche de supprimer une unité si elle est utilisée par un ingrédient
+ON UPDATE CASCADE;  -- Met à jour automatiquement la clé si l'ID dans la table unite change
+
+```
+
+---
+
+### Étape 4 (Optionnelle) : Rendre la colonne obligatoire
+
+Si chaque ingrédient **doit obligatoirement** posséder une unité dans votre système, vous pouvez ensuite ajouter la contrainte `NOT NULL` :
+
+```sql
+ALTER TABLE ingredients 
+ALTER COLUMN idUnite SET NOT NULL;
+
+```
+
+*(Remarque : sur MySQL, la syntaxe pour cette étape est `ALTER TABLE ingredients MODIFY COLUMN idUnite INT NOT NULL;`)*.
+
+======================================
+FILE : database/database.sql
+======================================
+
+
+======================================
+FILE : database/data.sql
+======================================
+-- Active: 1785442317642@@127.0.0.1@5432@restaurant
+\c restaurant;
+--modules ingredients et plats  et fournisseurs 
+CREATE TABLE Unite(
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(50) NOT NULL UNIQUE,
+    symbole VARCHAR(50)
+);
+CREATE TABLE TypeFournisseurs(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE Fournisseurs(
+    id SERIAL PRIMARY KEY,
+    typeFournisseurs INT NOT NULL,
+    nom VARCHAR(50) NOT NULL,
+    prenom VARCHAR(50) NOT NULL,
+    contact VARCHAR(50) NOT NULL,
+    Foreign Key (typeFournisseurs) REFERENCES TypeFournisseurs(id)
+);
+CREATE TABLE CategorieIngredients(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE StatutIngredient(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE Ingredients(
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    idCategorieIngredients INT NOT NULL,
+    idStatutIngredient INT NOT NULL,
+    idFournisseur INT NOT NULL,
+    idUnite INT NOT NULL,
+    Foreign Key (idUnite) REFERENCES Unite(id),
+    Foreign Key (idCategorieIngredients) REFERENCES CategorieIngredients(id),
+    Foreign KEY (idStatutIngredient) REFERENCES StatutIngredient(id),
+    Foreign KEY (idFournisseur) REFERENCES Fournisseurs(id)
+);
+CREATE TABLE HistoriqueIngredients(
+    id SERIAL PRIMARY KEY,
+    idIngredient INT NOT NULL,
+    dateEntree Date NOT NULL,
+    datePeremption Date CHECK( datePeremption IS NULL OR datePeremption >= dateEntree),
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    prixAchat DECIMAL(16, 3) NOT NULL CHECK (prixAchat >= 0),
+    Foreign KEY (idIngredient) REFERENCES Ingredients(id)
+);
+CREATE TABLE TypeMvtIngredient(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE InventaireIngredient(
+    id SERIAL PRIMARY KEY,
+    idIngredient INT NOT NULL,
+    dateInventaire Date NOT NULL,
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    typeMvtIngredient INT NOT NULL,
+    Foreign KEY (idIngredient) REFERENCES Ingredients(id),
+    Foreign KEY (typeMvtIngredient) REFERENCES TypeMvtIngredient(id)
+);
+CREATE TABLE EtatStockIngredient(
+    id SERIAL PRIMARY KEY,
+    idIngredient INT NOT NULL,
+    dateEtatStock Date NOT NULL,
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    Foreign KEY (idIngredient) REFERENCES Ingredients(id)
+);
+CREATE TABLE CategoriePlats(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE Plats(
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    idCategoriePlats INT NOT NULL,
+    prixVente DECIMAL(16, 3) NOT NULL CHECK (prixVente >= 0),
+    Foreign KEY (idCategoriePlats) REFERENCES CategoriePlats(id)
+);
+CREATE TABLE RecettePlats(
+    id SERIAL PRIMARY KEY,
+    idPlat INT NOT NULL,
+    idIngredient INT NOT NULL,
+    quantiteRequise DECIMAL(16, 3) NOT NULL CHECK (quantiteRequise > 0),
+    Foreign KEY (idPlat) REFERENCES Plats(id),
+    Foreign KEY (idIngredient) REFERENCES Ingredients(id)
+);
+-- Materielles 
+CREATE TABLE CategorieMaterielles(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE StatutMaterielles(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE Materielles(
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    dateEntree Date NOT NULL,
+    idCategorieMaterielles INT NOT NULL,
+    idStatutMaterielles INT NOT NULL,
+    Foreign KEY (idCategorieMaterielles) REFERENCES CategorieMaterielles(id),
+    Foreign KEY (idStatutMaterielles) REFERENCES StatutMaterielles(id)
+);
+CREATE TABLE HistoriqueMaterielles(
+    id SERIAL PRIMARY KEY,
+    idMaterielles INT NOT NULL,
+    dateEntree Date NOT NULL,
+    prixAchat DECIMAL(16, 3) NOT NULL CHECK (prixAchat >= 0),
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    idFournisseur INT,
+    Foreign KEY (idFournisseur) REFERENCES Fournisseurs(id),
+    Foreign KEY (idMaterielles) REFERENCES Materielles(id)
+);
+CREATE TABLE TypeMvtMaterielles(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE InventairesMaterielles(
+    id SERIAL PRIMARY KEY,
+    idMaterielles INT NOT NULL,
+    dateInventaire Date NOT NULL,
+    quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
+    typeMvtMaterielles INT NOT NULL,
+    Foreign KEY (idMaterielles) REFERENCES Materielles(id),
+    Foreign KEY (typeMvtMaterielles) REFERENCES TypeMvtMaterielles(id)
+);
+CREATE TABLE EtatStockMaterielles(
+    id SERIAL PRIMARY KEY,
+    idMaterielles INT NOT NULL,
+    dateEtatStock Date NOT NULL,
+    quantite DECIMAL(16, 3) NOT NULL CHECK(quantite > 0),
+    Foreign KEY (idMaterielles) REFERENCES Materielles(id)
+);
+
+CREATE TABLE MaintenanceMaterielles(
+    id SERIAL PRIMARY KEY,
+    idMaterielles INT NOT NULL,
+    dateMaintenance Date NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    cout DECIMAL(16, 3) NOT NULL CHECK (cout >= 0),
+    technicien VARCHAR(100),
+    Foreign KEY (idMaterielles) REFERENCES Materielles(id)
+);
+-- Personnels 
+CREATE TABLE RolePersonnels(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE Personnels(
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(50) NOT NULL,
+    prenom VARCHAR(50) NOT NULL,
+    contact VARCHAR(50) NOT NULL,
+    idRolePersonnels INT NOT NULL,
+    dateEmbauche Date NOT NULL,
+    Foreign KEY (idRolePersonnels) REFERENCES RolePersonnels(id)
+);
+CREATE TABLE FichePaie(
+    id SERIAL PRIMARY KEY,
+    idPersonnels INT NOT NULL,
+    datePaie Date NOT NULL,
+    salaire DECIMAL(16, 3) NOT NULL CHECK (salaire >= 0),
+    montantTotal DECIMAL(16, 3) NOT NULL CHECK(montantTotal >= 0),
+    --Denormaliser
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id)
+);
+CREATE TABLE HistoriqueSalaire(
+    id SERIAL PRIMARY KEY,
+    idPersonnels INT NOT NULL,
+    dateDebut Date NOT NULL,
+    dateFin Date CHECK(dateFin IS NULL OR dateFin >= dateDebut),
+    salaire DECIMAL(16, 3) NOT NULL CHECK (salaire >= 0),
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id)
+);
+CREATE TABLE RaisonAbsence(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE AbsencePersonnels(
+    id SERIAL PRIMARY KEY,
+    idPersonnels INT NOT NULL,
+    dateDebut Date NOT NULL,
+    dateFin Date CHECK(dateFin IS NULL OR dateFin >= dateDebut),
+    idRaisonAbsence INT NOT NULL,
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id),
+    Foreign KEY (idRaisonAbsence) REFERENCES RaisonAbsence(id)
+);
+CREATE TABLE BonusGlobaleSalairePersonnels(
+    id SERIAL PRIMARY KEY,
+    idPersonnels INT NOT NULL,
+    dateBonus Date NOT NULL,
+    montantBonus DECIMAL(16, 3) NOT NULL CHECK (montantBonus >= 0),
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id)
+);
+--Clients 
+CREATE TABLE TypeClient(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE Clients(
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(50) NOT NULL,
+    prenom VARCHAR(50) NOT NULL,
+    contact VARCHAR(50) NOT NULL,
+    idTypeClient INT NOT NULL,
+    Foreign KEY (idTypeClient) REFERENCES TypeClient(id)
+);
+-- Commandes et zones Livraisons et factures 
+CREATE TABLE ZonesLivraison(
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE,
+    min DECIMAL(16, 3) NOT NULL CHECK(min >= 0),
+    max DECIMAL(16, 3) NOT NULL CHECK(max >= min),
+    prix DECIMAL(16, 3) NOT NULL CHECK(prix >= 0)
+);
+CREATE TABLE Commandes(
+    id SERIAL PRIMARY KEY,
+    idClient INT NOT NULL,
+    dateCommande DATE NOT NULL,
+    idZoneLivraison INT NOT NULL,
+    montantTotal DECIMAL(16, 3) CHEcK (montantTotal > 0) NOT NULL,
+    FOREIGN KEY(idClient) REFERENCES Clients(id),
+    FOREIGN KEY(idZoneLivraison) REFERENCES ZonesLivraison(id)
+);
+CREATE TABLE DetailsCommandes(
+    id SERIAL PRIMARY KEY,
+    idCommande INT NOT NULL,
+    idPlat INT NOT NULL,
+    quantite DECIMAL(16, 3) CHECK (quantite > 0) NOT NULL,
+    prixUnitaire DECIMAL(16, 3) CHECK (prixUnitaire >= 0) NOT NULL,
+    montant DECIMAL(16, 3) CHECK (montant > 0) NOT NULL,
+    FOREIGN KEY(idCommande) REFERENCES Commandes(id),
+    FOREIGN KEY(idPlat) REFERENCES Plats(id)
+);
+CREATE TABLE FacturesCommandes(
+    id SERIAL PRIMARY KEY,
+    idCommande INT NOT NULL,
+    dateFacture DATE NOT NULL,
+    montantTotal DECIMAL(16, 3) CHECK (montantTotal > 0) NOT NULL,
+    FOREIGN KEY(idCommande) REFERENCES Commandes(id)
+);
+CREATE TABLE TypeMouvementCaisse (
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE MouvementCaisse (
+    id SERIAL PRIMARY KEY,
+    dateMouvement DATE NOT NULL,
+    montant DECIMAL(16, 3) CHECK (montant > 0) NOT NULL,
+    typeMouvement INT NOT NULL,
+    FOREIGN KEY(typeMouvement) REFERENCES TypeMouvementCaisse(id)
+);
+
+======================================
+FILE : database/delete.sql
+======================================
+-- Script pour supprimer définitivement toutes les tables du restaurant
+DROP TABLE IF EXISTS Unite CASCADE;
+DROP TABLE IF EXISTS MaintenanceMaterielles CASCADE;
+DROP TABLE IF EXISTS FacturesCommandes CASCADE;
+DROP TABLE IF EXISTS DetailsCommandes CASCADE;
+DROP TABLE IF EXISTS Commandes CASCADE;
+DROP TABLE IF EXISTS ZonesLivraison CASCADE;
+DROP TABLE IF EXISTS Clients CASCADE;
+DROP TABLE IF EXISTS TypeClient CASCADE;
+
+DROP TABLE IF EXISTS MouvementCaisse CASCADE;
+DROP TABLE IF EXISTS TypeMouvementCaisse CASCADE;
+
+DROP TABLE IF EXISTS BonusGlobaleSalairePersonnels CASCADE;
+DROP TABLE IF EXISTS AbsencePersonnels CASCADE;
+DROP TABLE IF EXISTS RaisonAbsence CASCADE;
+DROP TABLE IF EXISTS HistoriqueSalaire CASCADE;
+DROP TABLE IF EXISTS FichePaie CASCADE;
+DROP TABLE IF EXISTS Personnels CASCADE;
+DROP TABLE IF EXISTS RolePersonnels CASCADE;
+
+DROP TABLE IF EXISTS RecettePlats CASCADE;
+DROP TABLE IF EXISTS Plats CASCADE;
+DROP TABLE IF EXISTS CategoriePlats CASCADE;
+
+DROP TABLE IF EXISTS EtatStockIngredient CASCADE;
+DROP TABLE IF EXISTS InventaireIngredient CASCADE;
+DROP TABLE IF EXISTS TypeMvtIngredient CASCADE;
+DROP TABLE IF EXISTS HistoriqueIngredients CASCADE;
+DROP TABLE IF EXISTS Ingredients CASCADE;
+DROP TABLE IF EXISTS StatutIngredient CASCADE;
+DROP TABLE IF EXISTS CategorieIngredients CASCADE;
+
+DROP TABLE IF EXISTS Fournisseurs CASCADE;
+DROP TABLE IF EXISTS TypeFournisseurs CASCADE;
+
+DROP TABLE IF EXISTS EtatStockMaterielles CASCADE;
+DROP TABLE IF EXISTS InventairesMaterielles CASCADE;
+DROP TABLE IF EXISTS TypeMvtMaterielles CASCADE;
+DROP TABLE IF EXISTS HistoriqueMaterielles CASCADE;
+DROP TABLE IF EXISTS Materielles CASCADE;
+DROP TABLE IF EXISTS StatutMaterielles CASCADE;
+DROP TABLE IF EXISTS CategorieMaterielles CASCADE;
+DROP TABLE IF EXISTS MouvementCaisse CASCADE;
+
+
+======================================
+FILE : database/init.sql
+======================================
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+sudo -i -u postgres
+psql
+ALTER USER dev1 WITH dev;
+CREATE DATABASE restaurant;
+GRANT ALL PRIVILEGES ON DATABASE restaurant TO dev1;
+GRANT USAGE ON SCHEMA public TO dev1;
+GRANT CREATE ON SCHEMA public TO dev1;
+GRANT USAGE ON SCHEMA public TO dev1;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public to dev1;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public to dev1;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO dev1;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO dev1;
+
+======================================
+FILE : database/test.sql
+======================================
+-- Clean up (ordre pour respecter les contraintes de clés étrangères)
+DELETE FROM detailscommandes;
+DELETE FROM facturescommandes;
+DELETE FROM commandes;
+DELETE FROM mouvementcaisse;
+DELETE FROM typemouvementcaisse;
+DELETE FROM inventaireingredient;
+DELETE FROM etatstockingredient;
+DELETE FROM historiqueingredients;
+DELETE FROM recetteplats;
+DELETE FROM ingredients;
+DELETE FROM statutingredient;
+DELETE FROM typemvtingredient;
+DELETE FROM categorieingredients;
+DELETE FROM clients;
+DELETE FROM typeclient;
+DELETE FROM fournisseurs;
+DELETE FROM typefournisseurs;
+DELETE FROM fichepaie;
+DELETE FROM personnels;
+DELETE FROM rolepersonnels;
+DELETE FROM materielles;
+DELETE FROM categoriematerielles;
+DELETE FROM statutmaterielles;
+DELETE FROM zoneslivraison;
+DELETE FROM plats;
+DELETE FROM categorieplats;
+DELETE FROM unite;
+DELETE FROM maintenancematerielles;
+DELETE FROM etatstockmaterielles;
+DELETE FROM inventairesmaterielles;
+DELETE FROM historiquematerielles;
+DELETE FROM typemvtmaterielles;
+DELETE FROM materielles;
+DELETE FROM categoriematerielles;
+DELETE FROM statutmaterielles;
+-- Insertion directe avec la valeur NULL pour le symbole
+INSERT INTO unite (nom, symbole)
+VALUES ('Kilogramme', 'kg');
+INSERT INTO unite (nom, symbole)
+VALUES ('Gramme', 'g');
+INSERT INTO unite (nom, symbole)
+VALUES ('Litre', 'L');
+INSERT INTO unite (nom, symbole)
+VALUES ('Pièce', NULL);
+-- Le symbole est NULL ici
+INSERT INTO unite (nom, symbole)
+VALUES ('Sachet', NULL);
+-- Types et références de base
+INSERT INTO typeclient (id, libelle)
+VALUES (1, 'Passager'),
+    (2, 'Habitué'),
+    (3, 'VIP Touriste');
+INSERT INTO typefournisseurs (id, libelle)
+VALUES (1, 'Pêcheur Local'),
+    (2, 'Grossiste Alimentaire'),
+    (3, 'Fournisseur Boissons');
+INSERT INTO rolepersonnels (id, libelle)
+VALUES (1, 'Chef Cuisinier'),
+    (2, 'Serveur'),
+    (3, 'Caissier'),
+    (4, 'Livreur');
+INSERT INTO categorieplats (id, libelle)
+VALUES (1, 'Entrées / Tapas'),
+    (2, 'Plats de Résistance'),
+    (3, 'Desserts'),
+    (4, 'Boissons');
+INSERT INTO categorieingredients (id, libelle)
+VALUES (1, 'Produits de la mer'),
+    (2, 'Légumes & Fruits'),
+    (3, 'Épices & Condiments'),
+    (4, 'Produits Secs');
+INSERT INTO statutingredient (id, libelle)
+VALUES (1, 'Disponible'),
+    (2, 'Rupture de Stock'),
+    (3, 'Commande en cours');
+INSERT INTO typemvtingredient (id, libelle)
+VALUES (1, 'Entrée'),
+    (2, 'Sortie (Cuisine)'),
+    (3, 'Perte / Périmé');
+INSERT INTO categoriematerielles (id, libelle)
+VALUES (1, 'Équipement Cuisine'),
+    (2, 'Mobilier Salle'),
+    (3, 'Matériel Informatique');
+INSERT INTO statutmaterielles (id, libelle)
+VALUES (1, 'En Service'),
+    (2, 'En Maintenance'),
+    (3, 'Hors Service');
+-- Types de mouvement Materielles (Entree / Maintenance / HorsService — utilisés par MateriellesService)
+INSERT INTO typemvtmaterielles (id, libelle)
+VALUES (1, 'Entree'),
+    (2, 'Maintenance'),
+    (3, 'HorsService');
+-- Fiches Materielles
+INSERT INTO materielles (
+        id,
+        nom,
+        dateentree,
+        idcategoriematerielles,
+        idstatutmaterielles
+    )
+VALUES (
+        1,
+        'Four à pizza professionnel',
+        '2025-01-10',
+        1,
+        1
+    ),
+    (2, 'Réfrigérateur 400L', '2024-06-01', 1, 1),
+    (
+        3,
+        'Tables terrasse (lot de 10)',
+        '2023-11-20',
+        2,
+        1
+    ),
+    (4, 'Caisse enregistreuse', '2025-03-15', 3, 2);
+-- Historique des achats (suivi prix)
+INSERT INTO historiquematerielles (
+        id,
+        idmaterielles,
+        dateentree,
+        prixachat,
+        quantite,
+        idfournisseur
+    )
+VALUES (1, 1, '2025-01-10', 4500000.000, 1.000, NULL),
+    (2, 2, '2024-06-01', 3200000.000, 1.000, NULL),
+    (3, 3, '2023-11-20', 150000.000, 10.000, NULL),
+    (4, 4, '2025-03-15', 890000.000, 1.000, NULL);
+-- Journal des mouvements (Inventaire Materielles)
+INSERT INTO inventairesmaterielles (
+        id,
+        idmaterielles,
+        dateinventaire,
+        quantite,
+        typemvtmaterielles
+    )
+VALUES (1, 1, '2025-01-10', 1.000, 1),
+    (2, 2, '2024-06-01', 1.000, 1),
+    (3, 3, '2023-11-20', 10.000, 1),
+    (4, 4, '2025-03-15', 1.000, 1),
+    (5, 4, '2026-07-25', 1.000, 2);
+-- Stock courant (photo la plus récente par matériel)
+INSERT INTO etatstockmaterielles (id, idmaterielles, dateetatstock, quantite)
+VALUES (1, 1, '2026-07-30', 1.000),
+    (2, 2, '2026-07-30', 1.000),
+    (3, 3, '2026-07-30', 10.000),
+    (4, 4, '2026-07-30', 1.000);
+-- Maintenance
+INSERT INTO maintenancematerielles (
+        id,
+        idmaterielles,
+        datemaintenance,
+        description,
+        cout,
+        technicien
+    )
+VALUES (
+        1,
+        1,
+        '2026-07-25',
+        'Remplacement du rouleau papier et réparation du tiroir-caisse',
+        45000.000,
+        'Rija Electro'
+    );
+INSERT INTO typemouvementcaisse (id, libelle)
+VALUES (1, 'Vente Plat'),
+    (2, 'Achat Fournisseur'),
+    (3, 'Paiement Salaire'),
+    (4, 'Frais Généraux');
+-- Zones de livraison (Nosy Be)
+INSERT INTO zoneslivraison (id, libelle, min, max, prix)
+VALUES (1, 'Hell-Ville Center', 0.000, 5.000, 5000.000),
+    (
+        2,
+        'Ambatoloaka / Madirokely',
+        5.000,
+        15.000,
+        10000.000
+    ),
+    (3, 'Andilana', 15.000, 30.000, 25000.000);
+-- Clients
+INSERT INTO clients (id, nom, prenom, contact, idtypeclient)
+VALUES (1, 'Rasoa', 'Marie', '0340011122', 2),
+    (2, 'Dubois', 'Jean', '0321122233', 3),
+    (3, 'Andry', 'Rakoto', '0332233344', 1);
+-- Fournisseurs
+INSERT INTO fournisseurs (id, nom, prenom, contact, typefournisseurs)
+VALUES (
+        1,
+        'Pêcherie d Hell-Ville',
+        'Gérard',
+        '0341234567',
+        1
+    ),
+    (2, 'Nosy Be Primeurs', 'Fatima', '0327654321', 2);
+-- Personnels
+INSERT INTO personnels (
+        id,
+        nom,
+        prenom,
+        contact,
+        idrolepersonnels,
+        dateembauche
+    )
+VALUES (1, 'Koto', 'Jean', '0345566778', 1, '2024-01-15'),
+    (2, 'Bao', 'Soa', '0329988776', 2, '2024-03-01');
+-- Ingrédients
+INSERT INTO ingredients (
+        id,
+        nom,
+        idcategorieingredients,
+        idstatutingredient,
+        idfournisseur,
+        idUnite
+    )
+VALUES (1, 'Camaron / Crevette Géante', 1, 1, 1, 1),
+    (2, 'Riz Parfumé', 4, 1, 2, 2),
+    (3, 'Lait de Coco', 2, 1, 2, 3);
+-- Plats & Recettes
+INSERT INTO plats (id, nom, idcategorieplats, prixvente)
+VALUES (1, 'Camarons au Lait de Coco', 2, 35000.000),
+    (2, 'Riz Nature', 1, 4000.000);
+INSERT INTO recetteplats (id, idplat, idingredient, quantiterequise)
+VALUES (1, 1, 1, 0.300),
+    (2, 1, 3, 0.200),
+    (3, 2, 2, 0.150);
+-- Stock & Historique Ingrédients
+INSERT INTO historiqueingredients (
+        id,
+        idingredient,
+        dateentree,
+        dateperemption,
+        quantite,
+        prixachat
+    )
+VALUES (
+        1,
+        1,
+        '2026-07-28',
+        '2026-08-05',
+        10.000,
+        20000.000
+    ),
+    (
+        2,
+        2,
+        '2026-07-20',
+        '2026-12-31',
+        50.000,
+        2500.000
+    );
+INSERT INTO etatstockingredient (id, idingredient, dateetatstock, quantite)
+VALUES (1, 1, '2026-07-30', 8.500),
+    (2, 2, '2026-07-30', 45.000);
+-- Commandes & Détails
+INSERT INTO commandes (
+        id,
+        idclient,
+        datecommande,
+        idzonelivraison,
+        montanttotal
+    )
+VALUES (1, 2, '2026-07-30', 2, 45000.000);
+INSERT INTO detailscommandes (
+        id,
+        idcommande,
+        idplat,
+        quantite,
+        prixunitaire,
+        montant
+    )
+VALUES (1, 1, 1, 1.000, 35000.000, 35000.000);
+INSERT INTO facturescommandes (id, idcommande, datefacture, montanttotal)
+VALUES (1, 1, '2026-07-30', 45000.000);
+-- Caisse
+INSERT INTO mouvementcaisse (id, datemouvement, montant, typemouvement)
+VALUES (1, '2026-07-30', 45000.000, 1);
+
+INSERT INTO mouvementcaisse (id, datemouvement, montant, typemouvement) VALUES 
+(2, '2025-03-15', 890000.000, 2),  -- Achat Fournisseur : caisse enregistreuse
+(3, '2026-07-25',  45000.000, 4);  -- Frais Généraux : maintenance caisse enregistreuse
+
+======================================
+FILE : database/vider.sql
+======================================
+-- Active: 1785442317642@@127.0.0.1@5432@restaurant@public
+-- Script corrigé pour vider les tables et réinitialiser les identifiants
+TRUNCATE TABLE 
+    "facturescommandes",
+    "detailscommandes",
+    "commandes",
+    "zoneslivraison",
+    "clients",
+    "typeclient",
+    "mouvementcaisse",
+    "typemouvementcaisse",
+    "bonusglobalesalairepersonnels",
+    "absencepersonnels",
+    "raisonabsence",
+    "historiquesalaire",
+    "fichepaie",
+    "personnels",
+    "rolepersonnels",
+    "recetteplats",
+    "plats",
+    "categorieplats",
+    "etatstockingredient",
+    "inventaireingredient",
+    "typemvtingredient",
+    "historiqueingredients",
+    "ingredients",
+    "statutingredient",
+    "categorieingredients",
+    "fournisseurs",
+    "typefournisseurs",
+    "etatstockmaterielles",
+    "inventairesmaterielles",
+    "typemvtmaterielles",
+    "historiquematerielles",
+    "materielles",
+    "statutmaterielles",
+    "categoriematerielles",
+    "maintenancematerielles"
+RESTART IDENTITY CASCADE;
+
+
+======================================
+FILE : database/views.sql
+======================================
+-- ============================================================
+-- Vues PostgreSQL normalisées
+-- Objectif : offrir des lectures "à plat" pour les rapports/dashboard
+-- au-dessus du schéma normalisé généré par Hibernate (ddl-auto=update).
+-- Ce sont des VIEW (pas des tables) : aucune donnée n'est dupliquée.
+-- A exécuter via psql une fois les tables créées par l'application.
+-- ============================================================
+
+CREATE OR REPLACE VIEW vue_fournisseurs AS
+SELECT
+    f.id,
+    f.nom,
+    f.prenom,
+    f.contact,
+    t.id      AS id_type_fournisseur,
+    t.libelle AS type_fournisseur
+FROM fournisseurs f
+JOIN typefournisseurs t ON t.id = f.typefournisseurs;
+
+CREATE OR REPLACE VIEW vue_materielles AS
+SELECT
+    m.id,
+    m.nom,
+    m.dateentree,
+    c.id      AS id_categorie,
+    c.libelle AS categorie,
+    s.id      AS id_statut,
+    s.libelle AS statut
+FROM materielles m
+JOIN categoriematerielles c ON c.id = m.idcategoriematerielles
+JOIN statutmaterielles s    ON s.id = m.idstatutmaterielles;
+
+-- Agrégat utile pour le futur module "graphe" du README
+CREATE OR REPLACE VIEW vue_materielles_stats AS
+SELECT
+    c.libelle    AS categorie,
+    s.libelle    AS statut,
+    COUNT(m.id)  AS nombre
+FROM materielles m
+JOIN categoriematerielles c ON c.id = m.idcategoriematerielles
+JOIN statutmaterielles s    ON s.id = m.idstatutmaterielles
+GROUP BY c.libelle, s.libelle
+ORDER BY c.libelle, s.libelle;
+CREATE OR REPLACE VIEW vue_historique_materielles AS
+SELECT
+    h.id,
+    m.id   AS id_materiel,
+    m.nom  AS materiel,
+    h.dateentree,
+    h.quantite,
+    h.prixachat,
+    (h.quantite * h.prixachat) AS montant,
+    f.id   AS id_fournisseur,
+    (f.nom || ' ' || f.prenom) AS fournisseur
+FROM historiquematerielles h
+JOIN materielles m ON m.id = h.idmaterielles
+LEFT JOIN fournisseurs f ON f.id = h.idfournisseur;
+
+CREATE OR REPLACE VIEW vue_maintenance_materielles AS
+SELECT
+    mm.id,
+    m.id  AS id_materiel,
+    m.nom AS materiel,
+    mm.datemaintenance,
+    mm.description,
+    mm.cout,
+    mm.technicien
+FROM maintenancematerielles mm
+JOIN materielles m ON m.id = mm.idmaterielles;
+
+-- Stock courant par matériel (dernière photo EtatStockMaterielles)
+CREATE OR REPLACE VIEW vue_stock_materielles AS
+SELECT DISTINCT ON (m.id)
+    m.id,
+    m.nom,
+    e.dateetatstock,
+    e.quantite AS stock_actuel
+FROM materielles m
+LEFT JOIN etatstockmaterielles e ON e.idmaterielles = m.id
+ORDER BY m.id, e.dateetatstock DESC, e.id DESC;
+
+-- Coût total (achats + maintenance) par matériel
+CREATE OR REPLACE VIEW vue_couts_materielles AS
+SELECT
+    m.id,
+    m.nom,
+    COALESCE(SUM(h.quantite * h.prixachat), 0) AS total_achats,
+    COALESCE((SELECT SUM(mm.cout) FROM maintenancematerielles mm WHERE mm.idmaterielles = m.id), 0) AS total_maintenance
+FROM materielles m
+LEFT JOIN historiquematerielles h ON h.idmaterielles = m.id
+GROUP BY m.id, m.nom;
 
 ======================================
 RESOURCE : src/main/resources/application.properties
@@ -4232,7 +5623,11 @@ RESOURCE : src/main/resources/templates/ingredients/list.html
 ======================================
 RESOURCE : src/main/resources/templates/layout/footer.html
 ======================================
+<footer th:fragment="footer">
 
+    © 2026 Gestion Restaurant
+
+</footer>
 
 ======================================
 RESOURCE : src/main/resources/templates/layout/head.html
@@ -4359,7 +5754,187 @@ RESOURCE : src/main/resources/templates/layout/sidebar.html
 </html>
 
 ======================================
-RESOURCE : src/main/resources/templates/materilles/form.html
+RESOURCE : src/main/resources/templates/materielles/detail.html
+======================================
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:with="pageTitle='Matériel — ' + ${materiel.nom}">
+<head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
+<body>
+
+<div class="app">
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='materielles')}"></aside>
+
+  <div class="main">
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2 th:text="${materiel.nom}">Matériel</h2>
+          <div class="breadcrumb">Accueil / <a th:href="@{/materielles}">Matériels</a> / <span>Détail</span></div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <a th:href="@{/materielles/edit/{id}(id=${materiel.id})}" class="btn btn-secondary">Modifier la fiche</a>
+          <a th:href="@{/materielles/{id}/hors-service(id=${materiel.id})}" class="btn btn-danger"
+             onclick="return confirm('Déclarer ce matériel hors service ?');">Mettre hors service</a>
+        </div>
+      </div>
+
+      <!-- Infos générales -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="form-grid cols-4">
+          <div>
+            <div class="field-label">Catégorie</div>
+            <div th:text="${materiel.categorieMaterielles != null ? materiel.categorieMaterielles.libelle : 'N/A'}">Catégorie</div>
+          </div>
+          <div>
+            <div class="field-label">Statut</div>
+            <span class="badge badge-blue" th:text="${materiel.statutMaterielles != null ? materiel.statutMaterielles.libelle : 'N/A'}">Statut</span>
+          </div>
+          <div>
+            <div class="field-label">Date d'entrée</div>
+            <div th:text="${#temporals.format(materiel.dateEntree, 'dd/MM/yyyy')}">01/01/2026</div>
+          </div>
+          <div>
+            <div class="field-label">Stock actuel</div>
+            <div th:text="${stockActuel}">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historique des achats -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+          <div class="card-title">Historique des achats — suivi prix</div>
+        </div>
+
+        <form th:action="@{/materielles/{id}/historique/save(id=${materiel.id})}" method="post"
+              class="form-grid cols-3" style="margin-bottom: 20px;">
+          <div class="field-group">
+            <label class="field-label">Date d'achat <span class="required">*</span></label>
+            <input type="date" name="dateEntree" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Quantité <span class="required">*</span></label>
+            <input type="number" step="0.001" min="0.001" name="quantite" value="1" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Prix unitaire (Ar) <span class="required">*</span></label>
+            <input type="number" step="0.01" min="0.01" name="prixAchat" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Fournisseur</label>
+            <select name="idFournisseur">
+              <option value="">-- Aucun --</option>
+              <option th:each="f : ${fournisseurs}" th:value="${f.id}" th:text="${f.nom + ' ' + f.prenom}"></option>
+            </select>
+          </div>
+          <div class="field-group" style="align-self: end;">
+            <button type="submit" class="btn btn-primary btn-full">Enregistrer l'achat</button>
+          </div>
+        </form>
+
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Quantité</th><th>Prix unitaire</th><th>Montant</th><th>Fournisseur</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="h : ${historiqueList}">
+              <td th:text="${#temporals.format(h.dateEntree, 'dd/MM/yyyy')}">01/01/2026</td>
+              <td th:text="${h.quantite}">1</td>
+              <td th:text="${h.prixAchat} + ' Ar'">0 Ar</td>
+              <td th:text="${h.quantite * h.prixAchat} + ' Ar'">0 Ar</td>
+              <td th:text="${h.fournisseur != null ? (h.fournisseur.nom + ' ' + h.fournisseur.prenom) : '-'}">-</td>
+            </tr>
+            <tr th:if="${historiqueList.isEmpty()}">
+              <td colspan="5" style="text-align:center; color: var(--c-muted); padding: 18px;">Aucun achat enregistré</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Maintenance -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-header">
+          <div class="card-title">Maintenance</div>
+        </div>
+
+        <form th:action="@{/materielles/{id}/maintenance/save(id=${materiel.id})}" method="post"
+              class="form-grid cols-3" style="margin-bottom: 20px;">
+          <div class="field-group">
+            <label class="field-label">Date <span class="required">*</span></label>
+            <input type="date" name="dateMaintenance" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Description <span class="required">*</span></label>
+            <input type="text" name="description" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Coût (Ar) <span class="required">*</span></label>
+            <input type="number" step="0.01" min="0.01" name="cout" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Technicien</label>
+            <input type="text" name="technicien" />
+          </div>
+          <div class="field-group" style="align-self: end;">
+            <button type="submit" class="btn btn-primary btn-full">Enregistrer la maintenance</button>
+          </div>
+        </form>
+
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Description</th><th>Coût</th><th>Technicien</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="m : ${maintenancesList}">
+              <td th:text="${#temporals.format(m.dateMaintenance, 'dd/MM/yyyy')}">01/01/2026</td>
+              <td th:text="${m.description}">Description</td>
+              <td th:text="${m.cout} + ' Ar'">0 Ar</td>
+              <td th:text="${m.technicien != null ? m.technicien : '-'}">-</td>
+            </tr>
+            <tr th:if="${maintenancesList.isEmpty()}">
+              <td colspan="4" style="text-align:center; color: var(--c-muted); padding: 18px;">Aucune maintenance enregistrée</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+<!-- Journal des mouvements -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Journal des mouvements (Inventaire)</div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Type</th><th>Quantité</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="i : ${inventaireList}">
+              <td th:text="${#temporals.format(i.dateInventaire, 'dd/MM/yyyy')}">01/01/2026</td>
+              <td th:text="${i.typeMvtMaterielles != null ? i.typeMvtMaterielles.libelle : 'N/A'}">Type</td>
+              <td th:text="${i.quantite}">1</td>
+            </tr>
+            <tr th:if="${inventaireList.isEmpty()}">
+              <td colspan="3" style="text-align:center; color: var(--c-muted); padding: 18px;">Aucun mouvement enregistré</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
+
+</body>
+</html>
+
+======================================
+RESOURCE : src/main/resources/templates/materielles/form.html
 ======================================
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="fr"
@@ -4430,7 +6005,7 @@ RESOURCE : src/main/resources/templates/materilles/form.html
 </html>
 
 ======================================
-RESOURCE : src/main/resources/templates/materilles/list.html
+RESOURCE : src/main/resources/templates/materielles/list.html
 ======================================
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="fr">
@@ -4484,6 +6059,9 @@ RESOURCE : src/main/resources/templates/materilles/list.html
               </td>
               <td th:text="${#temporals.format(m.dateEntree, 'dd/MM/yyyy')}">01/01/2026</td>
               <td class="td-actions">
+                <a th:href="@{/materielles/{id}/detail(id=${m.id})}" class="action-btn" title="Détail">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </a>
                 <a th:href="@{/materielles/edit/{id}(id=${m.id})}" class="action-btn" title="Modifier">
                   <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </a>

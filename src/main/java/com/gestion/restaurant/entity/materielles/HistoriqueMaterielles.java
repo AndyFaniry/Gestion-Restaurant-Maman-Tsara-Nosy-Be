@@ -17,19 +17,19 @@ public class HistoriqueMaterielles {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "idmateriel", nullable = false)
+    @JoinColumn(name = "idmaterielles", nullable = false)
     private Materielles materiel;
 
-    @Column(name = "dateachat", nullable = false)
-    private LocalDate dateAchat;
-
-    @Column(nullable = false, precision = 16, scale = 3)
-    private BigDecimal quantite;
+    @Column(name = "dateentree", nullable = false)
+    private LocalDate dateEntree;
 
     @Column(name = "prixachat", nullable = false, precision = 16, scale = 3)
     private BigDecimal prixAchat;
 
+    @Column(nullable = false, precision = 16, scale = 3)
+    private BigDecimal quantite;
+
     @ManyToOne
     @JoinColumn(name = "idfournisseur")
-    private Fournisseurs fournisseur; // optionnel
+    private Fournisseurs fournisseur; // nullable, comme dans le script SQL
 }
