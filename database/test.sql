@@ -85,10 +85,10 @@ INSERT INTO historiquematerielles (
         quantite,
         idfournisseur
     )
-VALUES (  '2025-01-10', 4500000.000, 1.000, NULL),
-    (  '2024-06-01', 3200000.000, 1.000, NULL),
-    (  '2023-11-20', 150000.000, 10.000, NULL),
-    (  '2025-03-15', 890000.000, 1.000, NULL);
+VALUES (  1,'2025-01-10', 4500000.000, 1.000, NULL),
+    (  2,'2024-06-01', 3200000.000, 1.000, NULL),
+    (  3,'2023-11-20', 150000.000, 10.000, NULL),
+    (  4,'2025-03-15', 890000.00, 10.000, NULL);
 -- Journal des mouvements (Inventaire Materielles)
 INSERT INTO inventairesmaterielles (
         idmaterielles,
@@ -206,7 +206,7 @@ VALUES (
     );
 INSERT INTO etatstockingredient ( idingredient, dateetatstock, quantite)
 VALUES ( 1, '2026-07-30', 8.500),
-    (2, 2, '2026-07-30', 45.000);
+    ( 2, '2026-07-30', 45.000);
 -- Commandes & Détails
 INSERT INTO commandes (
         

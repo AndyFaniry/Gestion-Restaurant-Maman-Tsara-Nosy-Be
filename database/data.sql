@@ -12,7 +12,7 @@ CREATE TABLE typefournisseurs (
 );
 CREATE TABLE fournisseurs (
     id BIGSERIAL PRIMARY KEY,
-    typefournisseurs BIGINT NOT NULL REFERENCES typefournisseurs(id),
+    typefournisseurs BIGINT NOT NULL REFERENCES typefournisseurs(id) ON DELETE CASCADE,
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     contact VARCHAR(50) NOT NULL
@@ -29,14 +29,14 @@ CREATE TABLE statutingredient (
 CREATE TABLE ingredients (
     id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
-    idcategorieingredients BIGINT NOT NULL REFERENCES categorieingredients(id),
-    idstatutingredient BIGINT NOT NULL REFERENCES statutingredient(id),
-    idfournisseur BIGINT NOT NULL REFERENCES fournisseurs(id),
-    idunite BIGINT NOT NULL REFERENCES unite(id)
+    idcategorieingredients BIGINT NOT NULL REFERENCES categorieingredients(id) ON DELETE CASCADE,
+    idstatutingredient BIGINT NOT NULL REFERENCES statutingredient(id) ON DELETE CASCADE,
+    idfournisseur BIGINT NOT NULL REFERENCES fournisseurs(id) ON DELETE CASCADE,
+    idunite BIGINT NOT NULL REFERENCES unite(id) ON DELETE CASCADE
 );
 CREATE TABLE historiqueingredients (
     id BIGSERIAL PRIMARY KEY,
-    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     dateentree DATE NOT NULL,
     dateperemption DATE CHECK (dateperemption IS NULL OR dateperemption >= dateentree),
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
@@ -48,14 +48,14 @@ CREATE TABLE typemvtingredient (
 );
 CREATE TABLE inventaireingredient (
     id BIGSERIAL PRIMARY KEY,
-    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     dateinventaire DATE NOT NULL,
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
     typemvtingredient BIGINT NOT NULL REFERENCES typemvtingredient(id)
 );
 CREATE TABLE etatstockingredient (
     id BIGSERIAL PRIMARY KEY,
-    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     dateetatstock DATE NOT NULL,
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite >= 0)
 );
@@ -66,13 +66,13 @@ CREATE TABLE categorieplats (
 CREATE TABLE plats (
     id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
-    idcategorieplats BIGINT NOT NULL REFERENCES categorieplats(id),
+    idcategorieplats BIGINT NOT NULL REFERENCES categorieplats(id) ON DELETE CASCADE,
     prixvente DECIMAL(16, 3) NOT NULL CHECK (prixvente >= 0)
 );
 CREATE TABLE recetteplats (
     id BIGSERIAL PRIMARY KEY,
-    idplat BIGINT NOT NULL REFERENCES plats(id),
-    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    idplat BIGINT NOT NULL REFERENCES plats(id) ON DELETE CASCADE,
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     quantiterequise DECIMAL(16, 3) NOT NULL CHECK (quantiterequise > 0)
 );
 -- Materielles 
@@ -88,16 +88,16 @@ CREATE TABLE materielles (
     id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     dateentree DATE NOT NULL,
-    idcategoriematerielles BIGINT NOT NULL REFERENCES categoriematerielles(id),
-    idstatutmaterielles BIGINT NOT NULL REFERENCES statutmaterielles(id)
+    idcategoriematerielles BIGINT NOT NULL REFERENCES categoriematerielles(id) ON DELETE CASCADE,
+    idstatutmaterielles BIGINT NOT NULL REFERENCES statutmaterielles(id) ON DELETE CASCADE
 );
 CREATE TABLE historiquematerielles (
     id BIGSERIAL PRIMARY KEY,
-    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id) ON DELETE CASCADE,
     dateentree DATE NOT NULL,
     prixachat NUMERIC(16, 3) NOT NULL,
     quantite NUMERIC(16, 3) NOT NULL,
-    idfournisseur BIGINT REFERENCES fournisseurs(id)
+    idfournisseur BIGINT REFERENCES fournisseurs(id) ON DELETE CASCADE
 );
 CREATE TABLE typemvtmaterielles (
     id BIGSERIAL PRIMARY KEY,
@@ -105,21 +105,21 @@ CREATE TABLE typemvtmaterielles (
 );
 CREATE TABLE inventairesmaterielles (
     id BIGSERIAL PRIMARY KEY,
-    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id) ON DELETE CASCADE ,
     dateinventaire DATE NOT NULL,
     quantite NUMERIC(16, 3) NOT NULL,
-    typemvtmaterielles BIGINT NOT NULL REFERENCES typemvtmaterielles(id)
+    typemvtmaterielles BIGINT NOT NULL REFERENCES typemvtmaterielles(id) ON DELETE CASCADE
 );
 CREATE TABLE etatstockmaterielles (
     id BIGSERIAL PRIMARY KEY,
-    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id) ON DELETE CASCADE,
     dateetatstock DATE NOT NULL,
     quantite NUMERIC(16, 3) NOT NULL CHECK (quantite >= 0)
 );
 
 CREATE TABLE maintenancematerielles (
     id BIGSERIAL PRIMARY KEY,
-    idmaterielles BIGINT REFERENCES materielles(id),
+    idmaterielles BIGINT REFERENCES materielles(id) ON DELETE CASCADE, 
     datemaintenance DATE NOT NULL,
     description VARCHAR(255) NOT NULL,
     cout NUMERIC(16, 3) NOT NULL,
@@ -135,12 +135,12 @@ CREATE TABLE personnels (
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     contact VARCHAR(50) NOT NULL,
-    idrolepersonnels BIGINT NOT NULL REFERENCES rolepersonnels(id),
+    idrolepersonnels BIGINT NOT NULL REFERENCES rolepersonnels(id) ON DELETE CASCADE,
     dateembauche DATE NOT NULL
 );
 CREATE TABLE fichepaie (
     id BIGSERIAL PRIMARY KEY,
-    idpersonnels BIGINT NOT NULL REFERENCES personnels(id),
+    idpersonnels BIGINT NOT NULL REFERENCES personnels(id) ON DELETE CASCADE,
     datepaie DATE NOT NULL,
     salaire DECIMAL(16, 3) NOT NULL CHECK (salaire >= 0),
     montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
@@ -151,7 +151,7 @@ CREATE TABLE HistoriqueSalaire(
     dateDebut Date NOT NULL,
     dateFin Date CHECK(dateFin IS NULL OR dateFin >= dateDebut),
     salaire DECIMAL(16, 3) NOT NULL CHECK (salaire >= 0),
-    Foreign KEY (idPersonnels) REFERENCES Personnels(id)
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id) ON DELETE CASCADE
 );
 CREATE TABLE RaisonAbsence(
     id SERIAL PRIMARY KEY,
@@ -164,15 +164,15 @@ CREATE TABLE AbsencePersonnels(
     dateFin Date CHECK(dateFin IS NULL OR dateFin >= dateDebut),
     idRaisonAbsence INT NOT NULL,
     commentaire VARCHAR(255),
-    Foreign KEY (idPersonnels) REFERENCES Personnels(id),
-    Foreign KEY (idRaisonAbsence) REFERENCES RaisonAbsence(id)
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id) ON DELETE CASCADE,
+    Foreign KEY (idRaisonAbsence) REFERENCES RaisonAbsence(id) ON DELETE CASCADE
 );
 CREATE TABLE BonusGlobaleSalairePersonnels(
     id SERIAL PRIMARY KEY,
     idPersonnels INT NOT NULL,
     dateBonus Date NOT NULL,
     montantBonus DECIMAL(16, 3) NOT NULL CHECK (montantBonus >= 0),
-    Foreign KEY (idPersonnels) REFERENCES Personnels(id)
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id) ON DELETE CASCADE
 );
 --Clients 
 CREATE TABLE typeclient (
@@ -184,7 +184,7 @@ CREATE TABLE clients (
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     contact VARCHAR(50) NOT NULL,
-    idtypeclient BIGINT NOT NULL REFERENCES typeclient(id)
+    idtypeclient BIGINT NOT NULL REFERENCES typeclient(id) ON DELETE CASCADE
 );
 -- Commandes et zones Livraisons et factures 
 CREATE TABLE zoneslivraison (
@@ -196,22 +196,22 @@ CREATE TABLE zoneslivraison (
 );
 CREATE TABLE commandes (
     id BIGSERIAL PRIMARY KEY,
-    idclient BIGINT NOT NULL REFERENCES clients(id),
+    idclient BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     datecommande DATE NOT NULL,
-    idzonelivraison BIGINT NOT NULL REFERENCES zoneslivraison(id),
-    montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
+    idzonelivraison BIGINT NOT NULL REFERENCES zoneslivraison(id) ON DELETE CASCADE,
+    montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0) 
 );
 CREATE TABLE detailscommandes (
     id BIGSERIAL PRIMARY KEY,
-    idcommande BIGINT NOT NULL REFERENCES commandes(id),
-    idplat BIGINT NOT NULL REFERENCES plats(id),
+    idcommande BIGINT NOT NULL REFERENCES commandes(id) ON DELETE CASCADE,
+    idplat BIGINT NOT NULL REFERENCES plats(id) ON DELETE CASCADE,
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
     prixunitaire DECIMAL(16, 3) NOT NULL CHECK (prixunitaire >= 0),
     montant DECIMAL(16, 3) NOT NULL CHECK (montant >= 0)
 );
 CREATE TABLE facturescommandes (
     id BIGSERIAL PRIMARY KEY,
-    idcommande BIGINT NOT NULL REFERENCES commandes(id),
+    idcommande BIGINT NOT NULL REFERENCES commandes(id) ON DELETE CASCADE,
     datefacture DATE NOT NULL,
     montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
 );
@@ -223,5 +223,5 @@ CREATE TABLE mouvementcaisse (
     id BIGSERIAL PRIMARY KEY,
     datemouvement DATE NOT NULL,
     montant DECIMAL(16, 3) NOT NULL CHECK (montant > 0),
-    typemouvement BIGINT NOT NULL REFERENCES typemouvementcaisse(id)
+    typemouvement BIGINT NOT NULL REFERENCES typemouvementcaisse(id) ON DELETE CASCADE
 );

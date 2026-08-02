@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : dim. 02 août 2026 20:54:37 EAT
+Date : lun. 03 août 2026 00:51:40 EAT
 
 
 ======================================
@@ -122,63 +122,97 @@ FILE : src/main/java/com/gestion/restaurant/controller/commandes/CommandesContro
 ======================================
 package com.gestion.restaurant.controller.commandes;
 
+import com.gestion.restaurant.dto.commandes.CommandeCreateRequestDto;
+import com.gestion.restaurant.dto.commandes.CommandeLigneRequestDto;
 import com.gestion.restaurant.entity.commandes.Commandes;
 import com.gestion.restaurant.repository.clients.ClientsRepository;
-import com.gestion.restaurant.repository.commandes.CommandesRepository;
-import com.gestion.restaurant.repository.livraisons.ZonesLivraisonRepository;
+import com.gestion.restaurant.repository.livraisons.ZoneLivraisonRepository;
+import com.gestion.restaurant.repository.plats.PlatsRepository;
+import com.gestion.restaurant.service.commandes.CommandesService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/commandes")
 public class CommandesController {
 
-    private final CommandesRepository commandesRepository;
+    private final CommandesService commandesService;
     private final ClientsRepository clientsRepository;
-    private final ZonesLivraisonRepository zonesLivraisonRepository;
+    private final ZoneLivraisonRepository zonesLivraisonRepository;
+    private final PlatsRepository platsRepository;
 
-    public CommandesController(CommandesRepository commandesRepository, 
+    public CommandesController(CommandesService commandesService,
                                ClientsRepository clientsRepository, 
-                               ZonesLivraisonRepository zonesLivraisonRepository) {
-        this.commandesRepository = commandesRepository;
+                               ZoneLivraisonRepository zonesLivraisonRepository,
+                               PlatsRepository platsRepository) {
+        this.commandesService = commandesService;
         this.clientsRepository = clientsRepository;
         this.zonesLivraisonRepository = zonesLivraisonRepository;
+        this.platsRepository = platsRepository;
     }
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("commandesList", commandesRepository.findAll());
+        model.addAttribute("commandesList", commandesService.findAll());
         return "commandes/list";
     }
 
     @GetMapping("/new")
     public String showCreate(Model model) {
-        model.addAttribute("commande", new Commandes());
+        model.addAttribute("commandeDto", new CommandeCreateRequestDto());
         model.addAttribute("clients", clientsRepository.findAll());
         model.addAttribute("zones", zonesLivraisonRepository.findAll());
+        model.addAttribute("plats", platsRepository.findAll());
         return "commandes/form";
     }
 
     @PostMapping("/save")
-    public String save(@ModelAttribute("commande") Commandes commande) {
-        commandesRepository.save(commande);
+    public String save(@ModelAttribute("commandeDto") CommandeCreateRequestDto dto) {
+        commandesService.creereOuMettreAJourCommande(dto);
         return "redirect:/commandes";
     }
 
     @GetMapping("/edit/{id}")
     public String showEdit(@PathVariable("id") Long id, Model model) {
-        Commandes c = commandesRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Commande introuvable : " + id));
-        model.addAttribute("commande", c);
+        Commandes commande = commandesService.findById(id);
+        
+        CommandeCreateRequestDto dto = new CommandeCreateRequestDto();
+        dto.setId(commande.getId());
+        dto.setIdClient(commande.getClient() != null ? commande.getClient().getId() : null);
+        dto.setIdZoneLivraison(commande.getZoneLivraison() != null ? commande.getZoneLivraison().getId() : null);
+        dto.setDateCommande(commande.getDateCommande());
+
+        List<CommandeLigneRequestDto> lignesDto = commandesService.findDetailsByCommandeId(id).stream()
+                .map(d -> {
+                    CommandeLigneRequestDto l = new CommandeLigneRequestDto();
+                    l.setIdPlat(d.getPlat().getId());
+                    l.setQuantite(d.getQuantite());
+                    return l;
+                })
+                .collect(Collectors.toList());
+        dto.setLignes(lignesDto);
+
+        model.addAttribute("commandeDto", dto);
         model.addAttribute("clients", clientsRepository.findAll());
         model.addAttribute("zones", zonesLivraisonRepository.findAll());
+        model.addAttribute("plats", platsRepository.findAll());
         return "commandes/form";
+    }
+
+    @GetMapping("/{id}/detail")
+    public String showDetail(@PathVariable("id") Long id, Model model) {
+        model.addAttribute("commande", commandesService.findById(id));
+        model.addAttribute("details", commandesService.findDetailsByCommandeId(id));
+        return "commandes/detail";
     }
 
     @GetMapping("/delete/{id}")
     public String delete(@PathVariable("id") Long id) {
-        commandesRepository.deleteById(id);
+        commandesService.deleteById(id);
         return "redirect:/commandes";
     }
 }
@@ -461,6 +495,84 @@ public class StockController {
     public String delete(@PathVariable("id") Long id) {
         etatStockRepo.deleteById(id);
         return "redirect:/stocks";
+    }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/controller/livraisons/ZoneLivraisonController.java
+======================================
+package com.gestion.restaurant.controller.livraisons;
+
+import com.gestion.restaurant.dto.livraisons.ZoneLivraisonDto;
+import com.gestion.restaurant.dto.livraisons.ZoneLivraisonFilterDto;
+import com.gestion.restaurant.service.livraisons.ZoneLivraisonService;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+@Controller
+@RequestMapping("/zones-livraison")
+public class ZoneLivraisonController {
+
+    private final ZoneLivraisonService service;
+
+    public ZoneLivraisonController(ZoneLivraisonService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    public String list(@ModelAttribute("filter") ZoneLivraisonFilterDto filter,
+                       @PageableDefault(size = 10) Pageable pageable,
+                       Model model) {
+        model.addAttribute("page", service.findAll(filter, pageable));
+        return "zones-livraison/index";
+    }
+
+    @GetMapping("/creer")
+    public String createForm(Model model) {
+        model.addAttribute("zone", new ZoneLivraisonDto());
+        return "zones-livraison/form";
+    }
+
+    @GetMapping("/modifier/{id}")
+    public String editForm(@PathVariable Long id, Model model) {
+        model.addAttribute("zone", service.toDto(service.findById(id)));
+        return "zones-livraison/form";
+    }
+
+    @PostMapping("/enregistrer")
+    public String save(@Valid @ModelAttribute("zone") ZoneLivraisonDto dto,
+                       BindingResult result,
+                       RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            return "zones-livraison/form";
+        }
+
+        try {
+            service.save(dto);
+            redirectAttributes.addFlashAttribute("successMessage", "Zone de livraison enregistrée avec succès.");
+        } catch (IllegalArgumentException e) {
+            result.rejectValue("libelle", "error.zone", e.getMessage());
+            return "zones-livraison/form";
+        }
+
+        return "redirect:/zones-livraison";
+    }
+
+    @PostMapping("/supprimer/{id}")
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            service.deleteById(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Zone de livraison supprimée.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Impossible de supprimer cette zone.");
+        }
+        return "redirect:/zones-livraison";
     }
 }
 
@@ -836,6 +948,44 @@ public class ClientSearchCriteria {
 }
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/dto/commandes/CommandeCreateRequestDto.java
+======================================
+package com.gestion.restaurant.dto.commandes;
+
+import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+@Data
+public class CommandeCreateRequestDto {
+    private Long id;
+    private Long idClient;
+    private Long idZoneLivraison;
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate dateCommande;
+
+    private List<CommandeLigneRequestDto> lignes = new ArrayList<>();
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/commandes/CommandeLigneRequestDto.java
+======================================
+package com.gestion.restaurant.dto.commandes;
+
+import lombok.Data;
+import java.math.BigDecimal;
+
+@Data
+public class CommandeLigneRequestDto {
+    private Long idPlat;
+    private BigDecimal quantite;
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/dto/ingredients/AchatIngredientRequestDto.java
 ======================================
 package com.gestion.restaurant.dto.ingredients;
@@ -961,6 +1111,71 @@ public class IngredientStockDTO {
         this.ingredient = ingredient;
         this.quantiteActuelle = quantiteActuelle;
     }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/livraisons/ZoneLivraisonDto.java
+======================================
+package com.gestion.restaurant.dto.livraisons;
+
+import jakarta.validation.constraints.*;
+import java.math.BigDecimal;
+
+public class ZoneLivraisonDto {
+
+    private Long id;
+
+    @NotBlank(message = "Le libellé est obligatoire")
+    @Size(max = 50, message = "Le libellé ne doit pas dépasser 50 caractères")
+    private String libelle;
+
+    @NotNull(message = "La distance minimale est obligatoire")
+    @PositiveOrZero(message = "La distance minimale doit être supérieure ou égale à 0")
+    private BigDecimal min;
+
+    @NotNull(message = "La distance maximale est obligatoire")
+    @PositiveOrZero(message = "La distance maximale doit être supérieure ou égale à 0")
+    private BigDecimal max;
+
+    @NotNull(message = "Le prix est obligatoire")
+    @PositiveOrZero(message = "Le prix doit être supérieur ou égal à 0")
+    private BigDecimal prix;
+
+    // Getters et Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getLibelle() { return libelle; }
+    public void setLibelle(String libelle) { this.libelle = libelle; }
+
+    public BigDecimal getMin() { return min; }
+    public void setMin(BigDecimal min) { this.min = min; }
+
+    public BigDecimal getMax() { return max; }
+    public void setMax(BigDecimal max) { this.max = max; }
+
+    public BigDecimal getPrix() { return prix; }
+    public void setPrix(BigDecimal prix) { this.prix = prix; }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/livraisons/ZoneLivraisonFilterDto.java
+======================================
+package com.gestion.restaurant.dto.livraisons;
+
+
+import java.math.BigDecimal;
+
+public class ZoneLivraisonFilterDto {
+
+    private String search;
+    private BigDecimal maxPrix;
+
+    public String getSearch() { return search; }
+    public void setSearch(String search) { this.search = search; }
+
+    public BigDecimal getMaxPrix() { return maxPrix; }
+    public void setMaxPrix(BigDecimal maxPrix) { this.maxPrix = maxPrix; }
 }
 
 ======================================
@@ -2293,7 +2508,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessRuleException.class)
     public String handleBusinessRule(BusinessRuleException ex, RedirectAttributes redirectAttributes) {
         redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
-        return "redirect:/materielles";
+        return "redirect:/clients";
     }
 
     @ExceptionHandler(Exception.class)
@@ -2394,11 +2609,13 @@ package com.gestion.restaurant.repository.commandes;
 import com.gestion.restaurant.entity.commandes.DetailsCommandes;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 
 @Repository
 public interface DetailsCommandesRepository extends JpaRepository<DetailsCommandes, Long> {
+    List<DetailsCommandes> findByCommandeId(Long commandeId);
+    void deleteByCommandeId(Long commandeId);
 }
-
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/commandes/FacturesCommandesRepository.java
@@ -2569,18 +2786,20 @@ public interface UniteRepository extends JpaRepository<Unite, Long> {
 }
 
 ======================================
-FILE : src/main/java/com/gestion/restaurant/repository/livraisons/ZonesLivraisonRepository.java
+FILE : src/main/java/com/gestion/restaurant/repository/livraisons/ZoneLivraisonRepository.java
 ======================================
 package com.gestion.restaurant.repository.livraisons;
 
 import com.gestion.restaurant.entity.livraisons.ZonesLivraison;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ZonesLivraisonRepository extends JpaRepository<ZonesLivraison, Long> {
+public interface ZoneLivraisonRepository extends JpaRepository<ZonesLivraison, Long>, JpaSpecificationExecutor<ZonesLivraison> {
+    boolean existsByLibelleIgnoreCase(String libelle);
+    boolean existsByLibelleIgnoreCaseAndIdNot(String libelle, Long id);
 }
-
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/materielles/CategorieMateriellesRepository.java
@@ -3009,8 +3228,235 @@ public class ClientsService {
         }
         clientsRepository.deleteById(id);
     }
+}
 
-    
+======================================
+FILE : src/main/java/com/gestion/restaurant/service/commandes/CommandesService.java
+======================================
+package com.gestion.restaurant.service.commandes;
+
+import com.gestion.restaurant.dto.commandes.CommandeCreateRequestDto;
+import com.gestion.restaurant.dto.commandes.CommandeLigneRequestDto;
+import com.gestion.restaurant.entity.clients.Clients;
+import com.gestion.restaurant.entity.commandes.Commandes;
+import com.gestion.restaurant.entity.commandes.DetailsCommandes;
+import com.gestion.restaurant.entity.commandes.FacturesCommandes;
+import com.gestion.restaurant.entity.ingredients.Ingredients;
+import com.gestion.restaurant.entity.livraisons.ZonesLivraison;
+import com.gestion.restaurant.entity.plats.Plats;
+import com.gestion.restaurant.exception.BusinessRuleException;
+import com.gestion.restaurant.exception.ResourceNotFoundException;
+import com.gestion.restaurant.service.ingredients.IngredientsService;
+import com.gestion.restaurant.exception.BusinessRuleException;
+import com.gestion.restaurant.exception.ResourceNotFoundException;
+import com.gestion.restaurant.repository.clients.ClientsRepository;
+import com.gestion.restaurant.repository.commandes.CommandesRepository;
+import com.gestion.restaurant.repository.commandes.DetailsCommandesRepository;
+import com.gestion.restaurant.repository.commandes.FacturesCommandesRepository;
+import com.gestion.restaurant.repository.livraisons.ZoneLivraisonRepository;
+import com.gestion.restaurant.repository.plats.PlatsRepository;
+import com.gestion.restaurant.repository.recettes.RecettePlatsRepository;
+import com.gestion.restaurant.service.caisse.CaisseService;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
+@Service
+public class CommandesService {
+
+    private final CommandesRepository commandesRepository;
+    private final DetailsCommandesRepository detailsCommandesRepository;
+    private final FacturesCommandesRepository facturesCommandesRepository;
+    private final ClientsRepository clientsRepository;
+    private final ZoneLivraisonRepository zoneLivraisonRepository;
+    private final PlatsRepository platsRepository;
+    private final RecettePlatsRepository recettePlatsRepository;
+    private final CaisseService caisseService;
+    private final IngredientsService ingredientsService;
+
+    public CommandesService(CommandesRepository commandesRepository,
+                            DetailsCommandesRepository detailsCommandesRepository,
+                            FacturesCommandesRepository facturesCommandesRepository,
+                            ClientsRepository clientsRepository,
+                            ZoneLivraisonRepository zoneLivraisonRepository,
+                            PlatsRepository platsRepository,
+                            RecettePlatsRepository recettePlatsRepository,
+                            CaisseService caisseService,
+                        IngredientsService ingredientsService) {
+        this.commandesRepository = commandesRepository;
+        this.detailsCommandesRepository = detailsCommandesRepository;
+        this.facturesCommandesRepository = facturesCommandesRepository;
+        this.clientsRepository = clientsRepository;
+        this.zoneLivraisonRepository = zoneLivraisonRepository;
+        this.platsRepository = platsRepository;
+        this.recettePlatsRepository = recettePlatsRepository;
+        this.caisseService = caisseService;
+        this.ingredientsService = ingredientsService;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Commandes> findAll() {
+        return commandesRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Commandes findById(Long id) {
+        return commandesRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + id));
+    }
+
+    @Transactional
+    public Commandes creereCommande(CommandeCreateRequestDto dto) {
+        if (dto.getIdClient() == null) {
+            throw new BusinessRuleException("Le client est obligatoire.");
+        }
+        if (dto.getIdZoneLivraison() == null) {
+            throw new BusinessRuleException("La zone de livraison est obligatoire.");
+        }
+        if (dto.getLignes() == null || dto.getLignes().isEmpty()) {
+            throw new BusinessRuleException("La commande doit contenir au moins un plat.");
+        }
+
+        Clients client = clientsRepository.findById(dto.getIdClient())
+                .orElseThrow(() -> new ResourceNotFoundException("Client introuvable : " + dto.getIdClient()));
+
+        ZonesLivraison zone = zoneLivraisonRepository.findById(dto.getIdZoneLivraison())
+                .orElseThrow(() -> new ResourceNotFoundException("Zone de livraison introuvable : " + dto.getIdZoneLivraison()));
+
+        LocalDate dateMvt = dto.getDateCommande() != null ? dto.getDateCommande() : LocalDate.now();
+
+        // 1. Initialiser la commande avec le prix de la livraison
+        Commandes commande = new Commandes();
+        if (dto.getId() != null) {
+        commande = findById(dto.getId());
+        // Supprimer les anciens détails pour réinsérer les nouveaux
+        detailsCommandesRepository.deleteByCommandeId(commande.getId());
+    } else {
+        commande = new Commandes();
+    }
+        commande.setClient(client);
+        commande.setZoneLivraison(zone);
+        commande.setDateCommande(dateMvt);
+        
+        BigDecimal montantTotalCommande = zone.getPrix();
+
+        // Sauvegarde temporaire pour avoir l'ID
+        commande.setMontantTotal(montantTotalCommande);
+        commande = commandesRepository.save(commande);
+
+        // 2. Traiter chaque ligne du panier
+        for (CommandeLigneRequestDto ligneDto : dto.getLignes()) {
+            if (ligneDto.getIdPlat() != null && ligneDto.getQuantite() != null && ligneDto.getQuantite().compareTo(BigDecimal.ZERO) > 0) {
+                Plats plat = platsRepository.findById(ligneDto.getIdPlat())
+                        .orElseThrow(() -> new ResourceNotFoundException("Plat introuvable : " + ligneDto.getIdPlat()));
+
+                BigDecimal montantLigne = plat.getPrixVente().multiply(ligneDto.getQuantite());
+
+                DetailsCommandes detail = new DetailsCommandes();
+                detail.setCommande(commande);
+                detail.setPlat(plat);
+                detail.setQuantite(ligneDto.getQuantite());
+                detail.setPrixUnitaire(plat.getPrixVente());
+                detail.setMontant(montantLigne);
+
+                detailsCommandesRepository.save(detail);
+
+                montantTotalCommande = montantTotalCommande.add(montantLigne);
+            }
+        }
+
+        // Mettre à jour le montant global de la commande
+        commande.setMontantTotal(montantTotalCommande);
+        commande = commandesRepository.save(commande);
+
+        // 3. Générer la Facture
+        FacturesCommandes facture = new FacturesCommandes();
+        facture.setCommande(commande);
+        facture.setDateFacture(dateMvt);
+        facture.setMontantTotal(montantTotalCommande);
+        facturesCommandesRepository.save(facture);
+
+        // 4. Mouvement Caisse Prioritaire (Entrée d'argent)
+        caisseService.enregistrerEntree(montantTotalCommande, dateMvt);
+
+        return commande;
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        if (!commandesRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Commande introuvable : " + id);
+        }
+        commandesRepository.deleteById(id);
+    }
+    @Transactional(readOnly = true)
+    public List<DetailsCommandes> findDetailsByCommandeId(Long idCommande) {
+        return detailsCommandesRepository.findByCommandeId(idCommande);
+    }
+
+    @Transactional
+    public Commandes creereOuMettreAJourCommande(CommandeCreateRequestDto dto) {
+        Commandes commande;
+        if (dto.getId() != null) {
+            commande = findById(dto.getId());
+            // Nettoyer les anciennes lignes pour la mise à jour
+            detailsCommandesRepository.deleteByCommandeId(commande.getId());
+        } else {
+            commande = new Commandes();
+        }
+
+        Clients client = clientsRepository.findById(dto.getIdClient())
+                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé : " + dto.getIdClient()));
+        ZonesLivraison zone = zoneLivraisonRepository.findById(dto.getIdZoneLivraison())
+                .orElseThrow(() -> new ResourceNotFoundException("Zone non trouvée : " + dto.getIdZoneLivraison()));
+
+        commande.setClient(client);
+        commande.setZoneLivraison(zone);
+        commande.setDateCommande(dto.getDateCommande() != null ? dto.getDateCommande() : LocalDate.now());
+
+        BigDecimal totalPlats = BigDecimal.ZERO;
+
+        // Sauvegarder d'abord pour avoir l'ID
+        commande = commandesRepository.save(commande);
+
+        if (dto.getLignes() != null) {
+            for (var ligneDto : dto.getLignes()) {
+                if (ligneDto.getIdPlat() == null || ligneDto.getQuantite() == null) continue;
+
+                Plats plat = platsRepository.findById(ligneDto.getIdPlat())
+                        .orElseThrow(() -> new ResourceNotFoundException("Plat non trouvé : " + ligneDto.getIdPlat()));
+
+                DetailsCommandes detail = new DetailsCommandes();
+                detail.setCommande(commande);
+                detail.setPlat(plat);
+                detail.setQuantite(ligneDto.getQuantite());
+                detail.setPrixUnitaire(plat.getPrixVente());
+                BigDecimal sousTotal = plat.getPrixVente().multiply(ligneDto.getQuantite());
+                detail.setMontant(sousTotal);
+
+                detailsCommandesRepository.save(detail);
+                totalPlats = totalPlats.add(sousTotal);
+
+                // Déduire les ingrédients du stock
+                recettePlatsRepository.findByPlatId(plat.getId()).forEach(r -> {
+                    BigDecimal qteIng = r.getQuantiteRequise().multiply(ligneDto.getQuantite());
+                    ingredientsService.enregistrerSortieOuPerte(r.getIngredient().getId(), qteIng, "Sortie", commande.getDateCommande());
+                });
+            }
+        }
+
+        BigDecimal montantTotal = totalPlats.add(zone.getPrix());
+        commande.setMontantTotal(montantTotal);
+        commandesRepository.save(commande);
+
+        // Enregistrer l'entrée d'argent en caisse
+        caisseService.enregistrerEntree(montantTotal, commande.getDateCommande());
+
+        return commande;
+    }
 }
 
 ======================================
@@ -3459,6 +3905,73 @@ public class StockIngredientService {
                 historiqueRepository.save(lot);
             }
         }
+    }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/service/livraisons/ZoneLivraisonService.java
+======================================
+package com.gestion.restaurant.service.livraisons;
+
+import com.gestion.restaurant.dto.livraisons.ZoneLivraisonDto;
+import com.gestion.restaurant.dto.livraisons.ZoneLivraisonFilterDto;
+import com.gestion.restaurant.entity.livraisons.ZonesLivraison;
+import com.gestion.restaurant.repository.livraisons.ZoneLivraisonRepository;
+import com.gestion.restaurant.specification.livraisons.ZoneLivraisonSpecification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class ZoneLivraisonService {
+
+    private final ZoneLivraisonRepository repository;
+
+    public ZoneLivraisonService(ZoneLivraisonRepository repository) {
+        this.repository = repository;
+    }
+
+    public Page<ZonesLivraison> findAll(ZoneLivraisonFilterDto filter, Pageable pageable) {
+        return repository.findAll(ZoneLivraisonSpecification.getSpecifications(filter), pageable);
+    }
+
+    public ZonesLivraison findById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Zone de livraison non trouvée avec l'ID : " + id));
+    }
+
+    @Transactional
+    public void save(ZoneLivraisonDto dto) {
+        if (dto.getId() == null && repository.existsByLibelleIgnoreCase(dto.getLibelle())) {
+            throw new IllegalArgumentException("Une zone de livraison avec ce libellé existe déjà.");
+        }
+        if (dto.getId() != null && repository.existsByLibelleIgnoreCaseAndIdNot(dto.getLibelle(), dto.getId())) {
+            throw new IllegalArgumentException("Une zone de livraison avec ce libellé existe déjà.");
+        }
+
+        ZonesLivraison zone = (dto.getId() != null) ? findById(dto.getId()) : new ZonesLivraison();
+        zone.setLibelle(dto.getLibelle());
+        zone.setMin(dto.getMin());
+        zone.setMax(dto.getMax());
+        zone.setPrix(dto.getPrix());
+
+        repository.save(zone);
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        repository.deleteById(id);
+    }
+
+    public ZoneLivraisonDto toDto(ZonesLivraison entity) {
+        ZoneLivraisonDto dto = new ZoneLivraisonDto();
+        dto.setId(entity.getId());
+        dto.setLibelle(entity.getLibelle());
+        dto.setMin(entity.getMin());
+        dto.setMax(entity.getMax());
+        dto.setPrix(entity.getPrix());
+        return dto;
     }
 }
 
@@ -4165,6 +4678,42 @@ public class IngredientsSpecification {
 }
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/specification/livraisons/ZoneLivraisonSpecification.java
+======================================
+package com.gestion.restaurant.specification.livraisons;
+
+import com.gestion.restaurant.dto.livraisons.ZoneLivraisonFilterDto;
+import com.gestion.restaurant.entity.livraisons.ZonesLivraison;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ZoneLivraisonSpecification {
+
+    public static Specification<ZonesLivraison> getSpecifications(ZoneLivraisonFilterDto filter) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (filter != null) {
+                if (StringUtils.hasText(filter.getSearch())) {
+                    String searchTerm = "%" + filter.getSearch().trim().toLowerCase() + "%";
+                    predicates.add(criteriaBuilder.like(criteriaBuilder.lower(root.get("libelle")), searchTerm));
+                }
+
+                if (filter.getMaxPrix() != null) {
+                    predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("prix"), filter.getMaxPrix()));
+                }
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/specification/materielles/MateriellesSpecification.java
 ======================================
 package com.gestion.restaurant.specification.materielles;
@@ -4336,7 +4885,7 @@ CREATE TABLE typefournisseurs (
 );
 CREATE TABLE fournisseurs (
     id BIGSERIAL PRIMARY KEY,
-    typefournisseurs BIGINT NOT NULL REFERENCES typefournisseurs(id),
+    typefournisseurs BIGINT NOT NULL REFERENCES typefournisseurs(id) ON DELETE CASCADE,
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     contact VARCHAR(50) NOT NULL
@@ -4353,14 +4902,14 @@ CREATE TABLE statutingredient (
 CREATE TABLE ingredients (
     id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
-    idcategorieingredients BIGINT NOT NULL REFERENCES categorieingredients(id),
-    idstatutingredient BIGINT NOT NULL REFERENCES statutingredient(id),
-    idfournisseur BIGINT NOT NULL REFERENCES fournisseurs(id),
-    idunite BIGINT NOT NULL REFERENCES unite(id)
+    idcategorieingredients BIGINT NOT NULL REFERENCES categorieingredients(id) ON DELETE CASCADE,
+    idstatutingredient BIGINT NOT NULL REFERENCES statutingredient(id) ON DELETE CASCADE,
+    idfournisseur BIGINT NOT NULL REFERENCES fournisseurs(id) ON DELETE CASCADE,
+    idunite BIGINT NOT NULL REFERENCES unite(id) ON DELETE CASCADE
 );
 CREATE TABLE historiqueingredients (
     id BIGSERIAL PRIMARY KEY,
-    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     dateentree DATE NOT NULL,
     dateperemption DATE CHECK (dateperemption IS NULL OR dateperemption >= dateentree),
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
@@ -4372,14 +4921,14 @@ CREATE TABLE typemvtingredient (
 );
 CREATE TABLE inventaireingredient (
     id BIGSERIAL PRIMARY KEY,
-    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     dateinventaire DATE NOT NULL,
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
     typemvtingredient BIGINT NOT NULL REFERENCES typemvtingredient(id)
 );
 CREATE TABLE etatstockingredient (
     id BIGSERIAL PRIMARY KEY,
-    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     dateetatstock DATE NOT NULL,
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite >= 0)
 );
@@ -4390,13 +4939,13 @@ CREATE TABLE categorieplats (
 CREATE TABLE plats (
     id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
-    idcategorieplats BIGINT NOT NULL REFERENCES categorieplats(id),
+    idcategorieplats BIGINT NOT NULL REFERENCES categorieplats(id) ON DELETE CASCADE,
     prixvente DECIMAL(16, 3) NOT NULL CHECK (prixvente >= 0)
 );
 CREATE TABLE recetteplats (
     id BIGSERIAL PRIMARY KEY,
-    idplat BIGINT NOT NULL REFERENCES plats(id),
-    idingredient BIGINT NOT NULL REFERENCES ingredients(id),
+    idplat BIGINT NOT NULL REFERENCES plats(id) ON DELETE CASCADE,
+    idingredient BIGINT NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     quantiterequise DECIMAL(16, 3) NOT NULL CHECK (quantiterequise > 0)
 );
 -- Materielles 
@@ -4412,16 +4961,16 @@ CREATE TABLE materielles (
     id BIGSERIAL PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     dateentree DATE NOT NULL,
-    idcategoriematerielles BIGINT NOT NULL REFERENCES categoriematerielles(id),
-    idstatutmaterielles BIGINT NOT NULL REFERENCES statutmaterielles(id)
+    idcategoriematerielles BIGINT NOT NULL REFERENCES categoriematerielles(id) ON DELETE CASCADE,
+    idstatutmaterielles BIGINT NOT NULL REFERENCES statutmaterielles(id) ON DELETE CASCADE
 );
 CREATE TABLE historiquematerielles (
     id BIGSERIAL PRIMARY KEY,
-    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id) ON DELETE CASCADE,
     dateentree DATE NOT NULL,
     prixachat NUMERIC(16, 3) NOT NULL,
     quantite NUMERIC(16, 3) NOT NULL,
-    idfournisseur BIGINT REFERENCES fournisseurs(id)
+    idfournisseur BIGINT REFERENCES fournisseurs(id) ON DELETE CASCADE
 );
 CREATE TABLE typemvtmaterielles (
     id BIGSERIAL PRIMARY KEY,
@@ -4429,21 +4978,21 @@ CREATE TABLE typemvtmaterielles (
 );
 CREATE TABLE inventairesmaterielles (
     id BIGSERIAL PRIMARY KEY,
-    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id) ON DELETE CASCADE ,
     dateinventaire DATE NOT NULL,
     quantite NUMERIC(16, 3) NOT NULL,
-    typemvtmaterielles BIGINT NOT NULL REFERENCES typemvtmaterielles(id)
+    typemvtmaterielles BIGINT NOT NULL REFERENCES typemvtmaterielles(id) ON DELETE CASCADE
 );
 CREATE TABLE etatstockmaterielles (
     id BIGSERIAL PRIMARY KEY,
-    idmaterielles BIGINT NOT NULL REFERENCES materielles(id),
+    idmaterielles BIGINT NOT NULL REFERENCES materielles(id) ON DELETE CASCADE,
     dateetatstock DATE NOT NULL,
     quantite NUMERIC(16, 3) NOT NULL CHECK (quantite >= 0)
 );
 
 CREATE TABLE maintenancematerielles (
     id BIGSERIAL PRIMARY KEY,
-    idmaterielles BIGINT REFERENCES materielles(id),
+    idmaterielles BIGINT REFERENCES materielles(id) ON DELETE CASCADE, 
     datemaintenance DATE NOT NULL,
     description VARCHAR(255) NOT NULL,
     cout NUMERIC(16, 3) NOT NULL,
@@ -4459,12 +5008,12 @@ CREATE TABLE personnels (
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     contact VARCHAR(50) NOT NULL,
-    idrolepersonnels BIGINT NOT NULL REFERENCES rolepersonnels(id),
+    idrolepersonnels BIGINT NOT NULL REFERENCES rolepersonnels(id) ON DELETE CASCADE,
     dateembauche DATE NOT NULL
 );
 CREATE TABLE fichepaie (
     id BIGSERIAL PRIMARY KEY,
-    idpersonnels BIGINT NOT NULL REFERENCES personnels(id),
+    idpersonnels BIGINT NOT NULL REFERENCES personnels(id) ON DELETE CASCADE,
     datepaie DATE NOT NULL,
     salaire DECIMAL(16, 3) NOT NULL CHECK (salaire >= 0),
     montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
@@ -4475,7 +5024,7 @@ CREATE TABLE HistoriqueSalaire(
     dateDebut Date NOT NULL,
     dateFin Date CHECK(dateFin IS NULL OR dateFin >= dateDebut),
     salaire DECIMAL(16, 3) NOT NULL CHECK (salaire >= 0),
-    Foreign KEY (idPersonnels) REFERENCES Personnels(id)
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id) ON DELETE CASCADE
 );
 CREATE TABLE RaisonAbsence(
     id SERIAL PRIMARY KEY,
@@ -4488,15 +5037,15 @@ CREATE TABLE AbsencePersonnels(
     dateFin Date CHECK(dateFin IS NULL OR dateFin >= dateDebut),
     idRaisonAbsence INT NOT NULL,
     commentaire VARCHAR(255),
-    Foreign KEY (idPersonnels) REFERENCES Personnels(id),
-    Foreign KEY (idRaisonAbsence) REFERENCES RaisonAbsence(id)
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id) ON DELETE CASCADE,
+    Foreign KEY (idRaisonAbsence) REFERENCES RaisonAbsence(id) ON DELETE CASCADE
 );
 CREATE TABLE BonusGlobaleSalairePersonnels(
     id SERIAL PRIMARY KEY,
     idPersonnels INT NOT NULL,
     dateBonus Date NOT NULL,
     montantBonus DECIMAL(16, 3) NOT NULL CHECK (montantBonus >= 0),
-    Foreign KEY (idPersonnels) REFERENCES Personnels(id)
+    Foreign KEY (idPersonnels) REFERENCES Personnels(id) ON DELETE CASCADE
 );
 --Clients 
 CREATE TABLE typeclient (
@@ -4508,7 +5057,7 @@ CREATE TABLE clients (
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     contact VARCHAR(50) NOT NULL,
-    idtypeclient BIGINT NOT NULL REFERENCES typeclient(id)
+    idtypeclient BIGINT NOT NULL REFERENCES typeclient(id) ON DELETE CASCADE
 );
 -- Commandes et zones Livraisons et factures 
 CREATE TABLE zoneslivraison (
@@ -4520,22 +5069,22 @@ CREATE TABLE zoneslivraison (
 );
 CREATE TABLE commandes (
     id BIGSERIAL PRIMARY KEY,
-    idclient BIGINT NOT NULL REFERENCES clients(id),
+    idclient BIGINT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     datecommande DATE NOT NULL,
-    idzonelivraison BIGINT NOT NULL REFERENCES zoneslivraison(id),
-    montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
+    idzonelivraison BIGINT NOT NULL REFERENCES zoneslivraison(id) ON DELETE CASCADE,
+    montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0) 
 );
 CREATE TABLE detailscommandes (
     id BIGSERIAL PRIMARY KEY,
-    idcommande BIGINT NOT NULL REFERENCES commandes(id),
-    idplat BIGINT NOT NULL REFERENCES plats(id),
+    idcommande BIGINT NOT NULL REFERENCES commandes(id) ON DELETE CASCADE,
+    idplat BIGINT NOT NULL REFERENCES plats(id) ON DELETE CASCADE,
     quantite DECIMAL(16, 3) NOT NULL CHECK (quantite > 0),
     prixunitaire DECIMAL(16, 3) NOT NULL CHECK (prixunitaire >= 0),
     montant DECIMAL(16, 3) NOT NULL CHECK (montant >= 0)
 );
 CREATE TABLE facturescommandes (
     id BIGSERIAL PRIMARY KEY,
-    idcommande BIGINT NOT NULL REFERENCES commandes(id),
+    idcommande BIGINT NOT NULL REFERENCES commandes(id) ON DELETE CASCADE,
     datefacture DATE NOT NULL,
     montanttotal DECIMAL(16, 3) NOT NULL CHECK (montanttotal >= 0)
 );
@@ -4547,7 +5096,7 @@ CREATE TABLE mouvementcaisse (
     id BIGSERIAL PRIMARY KEY,
     datemouvement DATE NOT NULL,
     montant DECIMAL(16, 3) NOT NULL CHECK (montant > 0),
-    typemouvement BIGINT NOT NULL REFERENCES typemouvementcaisse(id)
+    typemouvement BIGINT NOT NULL REFERENCES typemouvementcaisse(id) ON DELETE CASCADE
 );
 
 ======================================
@@ -4650,42 +5199,7 @@ END $$;
 ======================================
 FILE : database/test.sql
 ======================================
--- Clean up (ordre pour respecter les contraintes de clés étrangères)
-DELETE FROM detailscommandes;
-DELETE FROM facturescommandes;
-DELETE FROM commandes;
-DELETE FROM mouvementcaisse;
-DELETE FROM typemouvementcaisse;
-DELETE FROM inventaireingredient;
-DELETE FROM etatstockingredient;
-DELETE FROM historiqueingredients;
-DELETE FROM recetteplats;
-DELETE FROM ingredients;
-DELETE FROM statutingredient;
-DELETE FROM typemvtingredient;
-DELETE FROM categorieingredients;
-DELETE FROM clients;
-DELETE FROM typeclient;
-DELETE FROM fournisseurs;
-DELETE FROM typefournisseurs;
-DELETE FROM fichepaie;
-DELETE FROM personnels;
-DELETE FROM rolepersonnels;
-DELETE FROM materielles;
-DELETE FROM categoriematerielles;
-DELETE FROM statutmaterielles;
-DELETE FROM zoneslivraison;
-DELETE FROM plats;
-DELETE FROM categorieplats;
-DELETE FROM unite;
-DELETE FROM maintenancematerielles;
-DELETE FROM etatstockmaterielles;
-DELETE FROM inventairesmaterielles;
-DELETE FROM historiquematerielles;
-DELETE FROM typemvtmaterielles;
-DELETE FROM materielles;
-DELETE FROM categoriematerielles;
-DELETE FROM statutmaterielles;
+
 -- Insertion directe avec la valeur NULL pour le symbole
 INSERT INTO unite (nom, symbole) VALUES 
 ('Gramme', 'g'), ('Kilogramme', 'kg'), ('Litre', 'L'), ('Pièce', 'pcs');
@@ -4695,109 +5209,108 @@ INSERT INTO unite (nom, symbole) VALUES
 INSERT INTO unite (nom, symbole)
 VALUES ('Sachet', NULL);
 -- Types et références de base
-INSERT INTO typeclient (id, libelle)
-VALUES (1, 'Passager'),
-    (2, 'Habitué'),
-    (3, 'VIP Touriste');
-INSERT INTO typefournisseurs (id, libelle)
-VALUES (1, 'Pêcheur Local'),
-    (2, 'Grossiste Alimentaire'),
-    (3, 'Fournisseur Boissons');
-INSERT INTO rolepersonnels (id, libelle)
-VALUES (1, 'Chef Cuisinier'),
-    (2, 'Serveur'),
-    (3, 'Caissier'),
-    (4, 'Livreur');
-INSERT INTO categorieplats (id, libelle)
-VALUES (1, 'Entrées / Tapas'),
-    (2, 'Plats de Résistance'),
-    (3, 'Desserts'),
-    (4, 'Boissons');
-INSERT INTO categorieingredients (id, libelle)
-VALUES (1, 'Produits de la mer'),
-    (2, 'Légumes & Fruits'),
-    (3, 'Épices & Condiments'),
-    (4, 'Produits Secs');
-INSERT INTO statutingredient (id, libelle)
-VALUES (1, 'Disponible'),
-    (2, 'Rupture de Stock'),
-    (3, 'Commande en cours');
-INSERT INTO typemvtingredient (id, libelle)
-VALUES (1, 'Entrée'),
-    (2, 'Sortie (Cuisine)'),
-    (3, 'Perte / Périmé');
-INSERT INTO categoriematerielles (id, libelle)
-VALUES (1, 'Équipement Cuisine'),
-    (2, 'Mobilier Salle'),
-    (3, 'Matériel Informatique');
-INSERT INTO statutmaterielles (id, libelle)
-VALUES (1, 'En Service'),
-    (2, 'En Maintenance'),
-    (3, 'Hors Service');
+INSERT INTO typeclient ( libelle)
+VALUES ( 'Passager'),
+    ( 'Habitué'),
+    ( 'VIP Touriste');
+INSERT INTO typefournisseurs ( libelle)
+VALUES ( 'Pêcheur Local'),
+    ( 'Grossiste Alimentaire'),
+    ( 'Fournisseur Boissons');
+INSERT INTO rolepersonnels ( libelle)
+VALUES ( 'Chef Cuisinier'),
+    ( 'Serveur'),
+    ( 'Caissier'),
+    ( 'Livreur');
+INSERT INTO categorieplats ( libelle)
+VALUES ( 'Entrées / Tapas'),
+    ( 'Plats de Résistance'),
+    ( 'Desserts'),
+    ( 'Boissons');
+INSERT INTO categorieingredients ( libelle)
+VALUES ( 'Produits de la mer'),
+    ( 'Légumes & Fruits'),
+    ( 'Épices & Condiments'),
+    ( 'Produits Secs');
+INSERT INTO statutingredient ( libelle)
+VALUES ( 'Disponible'),
+    ( 'Rupture de Stock'),
+    ( 'Commande en cours');
+INSERT INTO typemvtingredient ( libelle)
+VALUES ( 'Entrée'),
+    ( 'Sortie (Cuisine)'),
+    ( 'Perte / Périmé');
+INSERT INTO categoriematerielles ( libelle)
+VALUES ( 'Équipement Cuisine'),
+    ( 'Mobilier Salle'),
+    ( 'Matériel Informatique');
+INSERT INTO statutmaterielles ( libelle)
+VALUES ( 'En Service'),
+    ( 'En Maintenance'),
+    ( 'Hors Service');
 -- Types de mouvement Materielles (Entree / Maintenance / HorsService — utilisés par MateriellesService)
-INSERT INTO typemvtmaterielles (id, libelle)
-VALUES (1, 'Entree'),
-    (2, 'Maintenance'),
-    (3, 'HorsService');
+INSERT INTO typemvtmaterielles ( libelle)
+VALUES ( 'Entree'),
+    ( 'Maintenance'),
+    ( 'HorsService');
 -- Fiches Materielles
 INSERT INTO materielles (
-        id,
+      
         nom,
         dateentree,
         idcategoriematerielles,
         idstatutmaterielles
     )
 VALUES (
-        1,
+        
         'Four à pizza professionnel',
         '2025-01-10',
         1,
         1
     ),
-    (2, 'Réfrigérateur 400L', '2024-06-01', 1, 1),
+    ( 'Réfrigérateur 400L', '2024-06-01', 1, 1),
     (
-        3,
+        
         'Tables terrasse (lot de 10)',
         '2023-11-20',
         2,
         1
     ),
-    (4, 'Caisse enregistreuse', '2025-03-15', 3, 2);
+    ( 'Caisse enregistreuse', '2025-03-15', 3, 2);
 -- Historique des achats (suivi prix)
 INSERT INTO historiquematerielles (
-        id,
+    
         idmaterielles,
         dateentree,
         prixachat,
         quantite,
         idfournisseur
     )
-VALUES (1, 1, '2025-01-10', 4500000.000, 1.000, NULL),
-    (2, 2, '2024-06-01', 3200000.000, 1.000, NULL),
-    (3, 3, '2023-11-20', 150000.000, 10.000, NULL),
-    (4, 4, '2025-03-15', 890000.000, 1.000, NULL);
+VALUES (  1,'2025-01-10', 4500000.000, 1.000, NULL),
+    (  2,'2024-06-01', 3200000.000, 1.000, NULL),
+    (  3,'2023-11-20', 150000.000, 10.000, NULL),
+    (  4,'2025-03-15', 890000.00, 10.000, NULL);
 -- Journal des mouvements (Inventaire Materielles)
 INSERT INTO inventairesmaterielles (
-        id,
         idmaterielles,
         dateinventaire,
         quantite,
         typemvtmaterielles
     )
-VALUES (1, 1, '2025-01-10', 1.000, 1),
-    (2, 2, '2024-06-01', 1.000, 1),
-    (3, 3, '2023-11-20', 10.000, 1),
-    (4, 4, '2025-03-15', 1.000, 1),
-    (5, 4, '2026-07-25', 1.000, 2);
+VALUES ( 1, '2025-01-10', 1.000, 1),
+    ( 2, '2024-06-01', 1.000, 1),
+    ( 3, '2023-11-20', 10.000, 1),
+    ( 4, '2025-03-15', 1.000, 1),
+    ( 4, '2026-07-25', 1.000, 2);
 -- Stock courant (photo la plus récente par matériel)
-INSERT INTO etatstockmaterielles (id, idmaterielles, dateetatstock, quantite)
-VALUES (1, 1, '2026-07-30', 1.000),
-    (2, 2, '2026-07-30', 1.000),
-    (3, 3, '2026-07-30', 10.000),
-    (4, 4, '2026-07-30', 1.000);
+INSERT INTO etatstockmaterielles ( idmaterielles, dateetatstock, quantite)
+VALUES ( 1, '2026-07-30', 1.000),
+    ( 2, '2026-07-30', 1.000),
+    ( 3, '2026-07-30', 10.000),
+    ( 4, '2026-07-30', 1.000);
 -- Maintenance
 INSERT INTO maintenancematerielles (
-        id,
+        
         idmaterielles,
         datemaintenance,
         description,
@@ -4806,7 +5319,6 @@ INSERT INTO maintenancematerielles (
     )
 VALUES (
         1,
-        1,
         '2026-07-25',
         'Remplacement du rouleau papier et réparation du tiroir-caisse',
         45000.000,
@@ -4814,65 +5326,64 @@ VALUES (
     );
 INSERT INTO typemouvementcaisse (libelle) VALUES ('Entree'), ('Sortie');
 -- Zones de livraison (Nosy Be)
-INSERT INTO zoneslivraison (id, libelle, min, max, prix)
-VALUES (1, 'Hell-Ville Center', 0.000, 5.000, 5000.000),
+INSERT INTO zoneslivraison ( libelle, min, max, prix)
+VALUES ( 'Hell-Ville Center', 0.000, 5.000, 5000.000),
     (
-        2,
+        
         'Ambatoloaka / Madirokely',
         5.000,
         15.000,
         10000.000
     ),
-    (3, 'Andilana', 15.000, 30.000, 25000.000);
+    ( 'Andilana', 15.000, 30.000, 25000.000);
 -- Clients
-INSERT INTO clients (id, nom, prenom, contact, idtypeclient)
-VALUES (1, 'Rasoa', 'Marie', '0340011122', 2),
-    (2, 'Dubois', 'Jean', '0321122233', 3),
-    (3, 'Andry', 'Rakoto', '0332233344', 1);
+INSERT INTO clients ( nom, prenom, contact, idtypeclient)
+VALUES ( 'Rasoa', 'Marie', '0340011122', 2),
+    ( 'Dubois', 'Jean', '0321122233', 3),
+    ( 'Andry', 'Rakoto', '0332233344', 1);
 -- Fournisseurs
-INSERT INTO fournisseurs (id, nom, prenom, contact, typefournisseurs)
+INSERT INTO fournisseurs ( nom, prenom, contact, typefournisseurs)
 VALUES (
-        1,
+        
         'Pêcherie d Hell-Ville',
         'Gérard',
         '0341234567',
         1
     ),
-    (2, 'Nosy Be Primeurs', 'Fatima', '0327654321', 2);
+    ( 'Nosy Be Primeurs', 'Fatima', '0327654321', 2);
 -- Personnels
 INSERT INTO personnels (
-        id,
+        
         nom,
         prenom,
         contact,
         idrolepersonnels,
         dateembauche
     )
-VALUES (1, 'Koto', 'Jean', '0345566778', 1, '2024-01-15'),
-    (2, 'Bao', 'Soa', '0329988776', 2, '2024-03-01');
+VALUES ( 'Koto', 'Jean', '0345566778', 1, '2024-01-15'),
+    ( 'Bao', 'Soa', '0329988776', 2, '2024-03-01');
 -- Ingrédients
 INSERT INTO ingredients (
-        id,
         nom,
         idcategorieingredients,
         idstatutingredient,
         idfournisseur,
         idUnite
     )
-VALUES (1, 'Camaron / Crevette Géante', 1, 1, 1, 1),
-    (2, 'Riz Parfumé', 4, 1, 2, 2),
-    (3, 'Lait de Coco', 2, 1, 2, 3);
+VALUES ( 'Camaron / Crevette Géante', 1, 1, 1, 1),
+    ( 'Riz Parfumé', 4, 1, 2, 2),
+    ( 'Lait de Coco', 2, 1, 2, 3);
 -- Plats & Recettes
-INSERT INTO plats (id, nom, idcategorieplats, prixvente)
-VALUES (1, 'Camarons au Lait de Coco', 2, 35000.000),
-    (2, 'Riz Nature', 1, 4000.000);
-INSERT INTO recetteplats (id, idplat, idingredient, quantiterequise)
-VALUES (1, 1, 1, 0.300),
-    (2, 1, 3, 0.200),
-    (3, 2, 2, 0.150);
+INSERT INTO plats ( nom, idcategorieplats, prixvente)
+VALUES ( 'Camarons au Lait de Coco', 2, 35000.000),
+    ( 'Riz Nature', 1, 4000.000);
+INSERT INTO recetteplats ( idplat, idingredient, quantiterequise)
+VALUES ( 1, 1, 0.300),
+    ( 1, 3, 0.200),
+    ( 2, 2, 0.150);
 -- Stock & Historique Ingrédients
 INSERT INTO historiqueingredients (
-        id,
+        
         idingredient,
         dateentree,
         dateperemption,
@@ -4880,7 +5391,7 @@ INSERT INTO historiqueingredients (
         prixachat
     )
 VALUES (
-        1,
+        
         1,
         '2026-07-28',
         '2026-08-05',
@@ -4889,85 +5400,85 @@ VALUES (
     ),
     (
         2,
-        2,
         '2026-07-20',
         '2026-12-31',
         50.000,
         2500.000
     );
-INSERT INTO etatstockingredient (id, idingredient, dateetatstock, quantite)
-VALUES (1, 1, '2026-07-30', 8.500),
-    (2, 2, '2026-07-30', 45.000);
+INSERT INTO etatstockingredient ( idingredient, dateetatstock, quantite)
+VALUES ( 1, '2026-07-30', 8.500),
+    ( 2, '2026-07-30', 45.000);
 -- Commandes & Détails
 INSERT INTO commandes (
-        id,
+        
         idclient,
         datecommande,
         idzonelivraison,
         montanttotal
     )
-VALUES (1, 2, '2026-07-30', 2, 45000.000);
+VALUES ( 2, '2026-07-30', 2, 45000.000);
 INSERT INTO detailscommandes (
-        id,
         idcommande,
         idplat,
         quantite,
         prixunitaire,
         montant
     )
-VALUES (1, 1, 1, 1.000, 35000.000, 35000.000);
-INSERT INTO facturescommandes (id, idcommande, datefacture, montanttotal)
-VALUES (1, 1, '2026-07-30', 45000.000);
+VALUES ( 1, 1, 1.000, 35000.000, 35000.000);
+INSERT INTO facturescommandes ( idcommande, datefacture, montanttotal)
+VALUES ( 1, '2026-07-30', 45000.000);
 -- Caisse
-INSERT INTO mouvementcaisse (id, datemouvement, montant, typemouvement)
-VALUES (1, '2026-07-30', 45000.000, 1);
+INSERT INTO mouvementcaisse ( datemouvement, montant, typemouvement)
+VALUES ( '2026-07-30', 45000.000, 1);
 
-INSERT INTO mouvementcaisse (id, datemouvement, montant, typemouvement) VALUES 
-(2, '2025-03-15', 890000.000, 1),  -- Achat Fournisseur : caisse enregistreuse
-(3, '2026-07-25',  45000.000, 2);  -- Frais Généraux : maintenance caisse enregistreuse
+INSERT INTO mouvementcaisse ( datemouvement, montant, typemouvement) VALUES 
+( '2025-03-15', 890000.000, 1),  -- Achat Fournisseur : caisse enregistreuse
+( '2026-07-25',  45000.000, 2);  -- Frais Généraux : maintenance caisse enregistreuse
 INSERT INTO raisonabsence (libelle) VALUES ('Maladie'), ('Congé Payé'), ('Absence Injustifiée'), ('Maternité/Paternité') ON CONFLICT DO NOTHING
 
 ======================================
 FILE : database/vider.sql
 ======================================
 -- Active: 1785442317642@@127.0.0.1@5432@restaurant@public
--- Script corrigé pour vider les tables et réinitialiser les identifiants
+
+-- Script corrigé pour vider toutes les tables et réinitialiser les compteurs d'identifiants
 TRUNCATE TABLE 
-    "facturescommandes",
-    "detailscommandes",
-    "commandes",
-    "zoneslivraison",
-    "clients",
-    "typeclient",
-    "mouvementcaisse",
-    "typemouvementcaisse",
-    "bonusglobalesalairepersonnels",
-    "absencepersonnels",
-    "raisonabsence",
-    "historiquesalaire",
-    "fichepaie",
-    "personnels",
-    "rolepersonnels",
-    "recetteplats",
-    "plats",
-    "categorieplats",
-    "etatstockingredient",
-    "inventaireingredient",
-    "typemvtingredient",
-    "historiqueingredients",
-    "ingredients",
-    "statutingredient",
-    "categorieingredients",
-    "fournisseurs",
-    "typefournisseurs",
-    "etatstockmaterielles",
-    "inventairesmaterielles",
-    "typemvtmaterielles",
-    "historiquematerielles",
-    "materielles",
-    "statutmaterielles",
-    "categoriematerielles",
-    "maintenancematerielles"
+    facturescommandes,
+    detailscommandes,
+    commandes,
+    zoneslivraison,
+    clients,
+    typeclient,
+    mouvementcaisse,
+    typemouvementcaisse,
+    bonusglobalesalairepersonnels,
+    absencepersonnels,
+    raisonabsence,
+    historiquesalaire,
+    fichepaie,
+    personnels,
+    rolepersonnels,
+    recetteplats,
+    plats,
+    categorieplats,
+    etatstockingredient,
+    inventaireingredient,
+    typemvtingredient,
+    historiqueingredients,
+    ingredients,
+    statutingredient,
+    categorieingredients,
+    fournisseurs,
+    typefournisseurs,
+    etatstockmaterielles,
+    inventairesmaterielles,
+    typemvtmaterielles,
+    historiquematerielles,
+    maintenancematerielles,
+    materielles,
+    statutmaterielles,
+    categoriematerielles,
+    unite
 RESTART IDENTITY CASCADE;
 
 
@@ -5716,6 +6227,78 @@ input[type="color"] {
   .kpi-grid { grid-template-columns: 1fr 1fr; }
 }
 
+
+======================================
+RESOURCE : src/main/resources/static/js/commandes.js
+======================================
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('lignes-container');
+    const btnAjouter = document.getElementById('btn-ajouter-plat');
+
+    if (!container || !btnAjouter) return;
+
+    // Compteur pour les index d'éléments : lignes[0], lignes[1], ...
+    let lineIndex = container.children.length;
+
+    // Écouteur sur le bouton d'ajout de ligne
+    btnAjouter.addEventListener('click', () => {
+        ajouterLignePlat();
+    });
+
+    // Fonction d'ajout d'une nouvelle ligne
+    function ajouterLignePlat() {
+        const row = document.createElement('div');
+        row.className = 'row g-3 align-items-center mb-2 ligne-commande';
+        
+        // Copie des options du premier <select> disponible ou génération du template
+        const selectPlatHTML = document.getElementById('plat-template-select').innerHTML;
+
+        row.innerHTML = `
+            <div class="col-md-6">
+                <select name="lignes[${lineIndex}].idPlat" class="form-select" required>
+                    ${selectPlatHTML}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="number" 
+                       name="lignes[${lineIndex}].quantite" 
+                       class="form-control" 
+                       placeholder="Quantité" 
+                       min="1" 
+                       step="1" 
+                       value="1" 
+                       required>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger btn-supprimer">
+                    <i class="bi bi-trash"></i> Supprimer
+                </button>
+            </div>
+        `;
+
+        // Écouteur pour la suppression de la ligne
+        row.querySelector('.btn-supprimer').addEventListener('click', () => {
+            row.remove();
+            reindexLignes();
+        });
+
+        container.appendChild(row);
+        lineIndex++;
+    }
+
+    // Ré-indexation obligatoire des champs pour Spring Binding (lignes[0], lignes[1], ...)
+    function reindexLignes() {
+        const rows = container.querySelectorAll('.ligne-commande');
+        rows.forEach((row, index) => {
+            const select = row.querySelector('select');
+            const input = row.querySelector('input');
+
+            if (select) select.name = `lignes[${index}].idPlat`;
+            if (input) input.name = `lignes[${index}].quantite`;
+        });
+        lineIndex = rows.length;
+    }
+});
 
 ======================================
 RESOURCE : src/main/resources/static/js/script.js
@@ -6648,7 +7231,7 @@ RESOURCE : src/main/resources/templates/clients/form.html
 
     <div class="main">
         <!-- Topbar globale avec titre dynamique -->
-        <div th:replace="~{fragments/layout :: topbar(${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'})}"></div
+        <div th:replace="~{fragments/layout :: topbar(${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'})}"></div>
 
         <div class="content">
             <div class="page-header">
@@ -6772,54 +7355,154 @@ RESOURCE : src/main/resources/templates/clients/list.html
 </html>
 
 ======================================
+RESOURCE : src/main/resources/templates/commandes/detail.html
+======================================
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Détails de la Commande</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+
+    <h2>Détails de la Commande #<span th:text="${commande.id}"></span></h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <p><strong>Client :</strong> <span th:text="${commande.client.nom + ' ' + commande.client.prenom}"></span></p>
+            <p><strong>Date :</strong> <span th:text="${commande.dateCommande}"></span></p>
+            <p><strong>Zone de Livraison :</strong> <span th:text="${commande.zoneLivraison.libelle}"></span> (<span th:text="${commande.zoneLivraison.prix}"></span> €)</p>
+            <p><strong>Montant Total :</strong> <span class="badge bg-success fs-6" th:text="${commande.montantTotal + ' €'}"></span></p>
+        </div>
+    </div>
+
+    <h4>Liste des Plats</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Plat</th>
+                <th>Prix Unitaire</th>
+                <th>Quantité</th>
+                <th>Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="d : ${details}">
+                <td th:text="${d.plat.nom}"></td>
+                <td th:text="${d.prixUnitaire + ' €'}"></td>
+                <td th:text="${d.quantite}"></td>
+                <td th:text="${d.montant + ' €'}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a th:href="@{/commandes/edit/{id}(id=${commande.id})}" class="btn btn-warning">Modifier</a>
+    <a th:href="@{/commandes}" class="btn btn-secondary">Retour</a>
+
+</body>
+</html>
+
+======================================
 RESOURCE : src/main/resources/templates/commandes/form.html
 ======================================
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>Formulaire Commande</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-<body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1 th:text="${commande.id == null ? 'Créer une Commande' : 'Modifier la Commande'}"></h1>
-            </header>
-            <section class="form-container">
-                <form th:action="@{/commandes/save}" th:object="${commande}" method="post" class="custom-form">
-                    <input type="hidden" th:field="*{id}" />
-                    <div class="form-group">
-                        <label>Client :</label>
-                        <select th:field="*{client}" class="form-control" required>
-                            <option value="">-- Sélectionner un client --</option>
-                            <option th:each="cli : ${clients}" th:value="${cli.id}" th:text="${cli.nom + ' ' + cli.prenom}"></option>
+<body class="container mt-4">
+
+    <h2 th:text="${commandeDto.id == null ? 'Nouvelle Commande' : 'Modifier Commande'}">Commande</h2>
+
+    <form th:action="@{/commandes/save}" th:object="${commandeDto}" method="post">
+        <input type="hidden" th:field="*{id}" />
+
+        <div class="row mb-3">
+            <div class="col">
+                <label class="form-label">Client :</label>
+                <select class="form-select" th:field="*{idClient}" required>
+                    <option value="">-- Sélectionner un client --</option>
+                    <option th:each="c : ${clients}" th:value="${c.id}" th:text="${c.nom + ' ' + c.prenom}"></option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label">Zone Livraison :</label>
+                <select class="form-select" th:field="*{idZoneLivraison}" required>
+                    <option value="">-- Sélectionner une zone --</option>
+                    <option th:each="z : ${zones}" th:value="${z.id}" th:text="${z.libelle + ' (' + z.prix + ' €)'}"></option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label">Date :</label>
+                <input type="date" class="form-control" th:field="*{dateCommande}" required />
+            </div>
+        </div>
+
+        <h4>Plats commandés</h4>
+        <table class="table table-bordered" id="tablePlats">
+            <thead>
+                <tr>
+                    <th>Plat</th>
+                    <th>Quantité</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="lignesContainer">
+                <tr th:each="ligne, stat : *{lignes}">
+                    <td>
+                        <select class="form-select" th:field="*{lignes[__${stat.index}__].idPlat}" required>
+                            <option value="">-- Plat --</option>
+                            <option th:each="p : ${plats}" th:value="${p.id}" th:text="${p.nom + ' - ' + p.prixVente + ' €'}"></option>
                         </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Date Commande :</label>
-                        <input type="date" th:field="*{dateCommande}" required class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label>Zone de Livraison :</label>
-                        <select th:field="*{zoneLivraison}" class="form-control">
-                            <option value="">-- Aucune (Sur place) --</option>
-                            <option th:each="z : ${zones}" th:value="${z.id}" th:text="${z.libelle + ' (' + z.prix + ' Ar)'}"></option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Montant Total (Ar) :</label>
-                        <input type="number" step="0.01" th:field="*{montantTotal}" required class="form-control" />
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
-                        <a th:href="@{/commandes}" class="btn btn-secondary">Annuler</a>
-                    </div>
-                </form>
-            </section>
-        </main>
-    </div>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" class="form-control" th:field="*{lignes[__${stat.index}__].quantite}" required />
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">Supprimer</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button" class="btn btn-secondary mb-3" onclick="ajouterLigne()">+ Ajouter un plat</button>
+        <br>
+        <button type="submit" class="btn btn-success">Enregistrer la commande</button>
+        <a th:href="@{/commandes}" class="btn btn-outline-secondary">Annuler</a>
+    </form>
+
+    <script th:inline="javascript">
+        let platsList = /*[[${plats}]]*/ [];
+        
+        function ajouterLigne() {
+            let container = document.getElementById("lignesContainer");
+            let index = container.children.length;
+
+            let optionsHtml = '<option value="">-- Plat --</option>';
+            platsList.forEach(p => {
+                optionsHtml += `<option value="${p.id}">${p.nom} - ${p.prixVente} €</option>`;
+            });
+
+            let tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>
+                    <select name="lignes[${index}].idPlat" class="form-select" required>
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" step="0.01" name="lignes[${index}].quantite" value="1" class="form-control" required />
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">Supprimer</button>
+                </td>
+            `;
+            container.appendChild(tr);
+        }
+    </script>
 </body>
 </html>
 
@@ -7711,6 +8394,11 @@ RESOURCE : src/main/resources/templates/layout/sidebar.html
     Personnels
   </a>
 
+  <a th:href="@{/zones-livraison}" class="nav-link">
+        <i class="fas fa-truck nav-icon"></i>
+        <p>Zones de Livraison</p>
+    </a>
+
   <div class="sidebar-bottom">
     <div class="user-row">
       <div class="avatar">AD</div>
@@ -8202,10 +8890,9 @@ RESOURCE : src/main/resources/templates/personnels/form.html
                     </div>
                     <div class="form-group">
                         <label>Rôle :</label>
-                        <select th:field="*{rolePersonnels}" class="form-control" required>
-                            <option value="">-- Sélectionner --</option>
-                            <option th:each="r : ${roles}" th:value="${r.id}" th:text="${r.libelle}"></option>
-                        </select>
+                    <select th:field="*{idRole}">
+                        <option th:each="r : ${roles}" th:value="${r.id}" th:text="${r.libelle}"></option>
+                    </select>
                     </div>
                     <div class="form-group">
                         <label>Date d'embauche :</label>
@@ -8252,7 +8939,7 @@ RESOURCE : src/main/resources/templates/personnels/list.html
                             <td th:text="${p.nom}">Nom</td>
                             <td th:text="${p.prenom}">Prénom</td>
                             <td th:text="${p.contact}">0320000000</td>
-                            <td th:text="${p.rolePersonnels != null ? p.rolePersonnels.libelle : 'N/A'}">Rôle</td>
+                            <td th-text="${p.roleLibelle != null ? p.roleLibelle : 'N/A'}"></td>
                             <td th:text="${p.dateEmbauche}">2024-01-01</td>
                             <td class="actions">
                                 <a th:href="@{/personnels/edit/{id}(id=${p.id})}" class="btn btn-warning">Modifier</a>
@@ -8984,5 +9671,114 @@ RESOURCE : src/main/resources/templates/stocks/list.html
             </section>
         </main>
     </div>
+</body>
+</html>
+
+======================================
+RESOURCE : src/main/resources/templates/zones-livraison/form.html
+======================================
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Formulaire Zone de Livraison</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-4">
+   <h1 th:text="${zone.id == null ? 'Ajouter une Zone' : 'Modifier la Zone'}">Titre</h1>
+
+    <form th:action="@{/zones-livraison/enregistrer}" th:object="${zone}" method="post" class="mt-3">
+        <input type="hidden" th:field="*{id}">
+
+        <div class="mb-3">
+            <label class="form-label">Libellé</label>
+            <input type="text" th:field="*{libelle}" class="form-control" th:classappend="${#fields.hasErrors('libelle')} ? 'is-invalid'">
+            <div class="invalid-feedback" th:errors="*{libelle}"></div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Distance Min</label>
+                <input type="number" step="0.001" th:field="*{min}" class="form-control" th:classappend="${#fields.hasErrors('min')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{min}"></div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Distance Max</label>
+                <input type="number" step="0.001" th:field="*{max}" class="form-control" th:classappend="${#fields.hasErrors('max')} ? 'is-invalid'">
+                <div class="invalid-feedback" th:errors="*{max}"></div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Prix</label>
+            <input type="number" step="0.01" th:field="*{prix}" class="form-control" th:classappend="${#fields.hasErrors('prix')} ? 'is-invalid'">
+            <div class="invalid-feedback" th:errors="*{prix}"></div>
+        </div>
+
+        <button type="submit" class="btn btn-success">Enregistrer</button>
+        <a th:href="@{/zones-livraison}" class="btn btn-secondary">Annuler</a>
+    </form>
+</div>
+</body>
+</html>
+
+======================================
+RESOURCE : src/main/resources/templates/zones-livraison/index.html
+======================================
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Zones de Livraison</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-4">
+    <h2>Gestion des Zones de Livraison</h2>
+
+    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+    <div class="d-flex justify-content-between mb-3">
+        <form th:action="@{/zones-livraison}" method="get" th:object="${filter}" class="d-flex gap-2">
+            <input type="text" th:field="*{search}" class="form-control" placeholder="Rechercher par libellé...">
+            <button type="submit" class="btn btn-secondary">Filtrer</button>
+        </form>
+        <a th:href="@{/zones-livraison/creer}" class="btn btn-primary">Ajouter une Zone</a>
+    </div>
+
+    <table class="table table-striped border">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Libellé</th>
+                <th>Distance Min (km)</th>
+                <th>Distance Max (km)</th>
+                <th>Prix (€)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="z : ${page.content}">
+                <td th:text="${z.id}">1</td>
+                <td th:text="${z.libelle}">Zone A</td>
+                <td th:text="${z.min}">0.000</td>
+                <td th:text="${z.max}">5.000</td>
+                <td th:text="${#numbers.formatDecimal(z.prix, 1, 'POINT', 2, 'COMMA')}">5.00</td>
+                <td class="d-flex gap-1">
+                    <a th:href="@{/zones-livraison/modifier/{id}(id=${z.id})}" class="btn btn-sm btn-warning">Modifier</a>
+                    <form th:action="@{/zones-livraison/supprimer/{id}(id=${z.id})}" method="post" onsubmit="return confirm('Confirmer la suppression ?');">
+                        <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(page.content)}">
+                <td colspan="6" class="text-center">Aucune zone de livraison trouvée.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 </body>
 </html>

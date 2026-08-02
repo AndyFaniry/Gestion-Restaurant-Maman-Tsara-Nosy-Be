@@ -1,48 +1,99 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>Formulaire Commande</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-<body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1 th:text="${commande.id == null ? 'Créer une Commande' : 'Modifier la Commande'}"></h1>
-            </header>
-            <section class="form-container">
-                <form th:action="@{/commandes/save}" th:object="${commande}" method="post" class="custom-form">
-                    <input type="hidden" th:field="*{id}" />
-                    <div class="form-group">
-                        <label>Client :</label>
-                        <select th:field="*{client}" class="form-control" required>
-                            <option value="">-- Sélectionner un client --</option>
-                            <option th:each="cli : ${clients}" th:value="${cli.id}" th:text="${cli.nom + ' ' + cli.prenom}"></option>
+<body class="container mt-4">
+
+    <h2 th:text="${commandeDto.id == null ? 'Nouvelle Commande' : 'Modifier Commande'}">Commande</h2>
+
+    <form th:action="@{/commandes/save}" th:object="${commandeDto}" method="post">
+        <input type="hidden" th:field="*{id}" />
+
+        <div class="row mb-3">
+            <div class="col">
+                <label class="form-label">Client :</label>
+                <select class="form-select" th:field="*{idClient}" required>
+                    <option value="">-- Sélectionner un client --</option>
+                    <option th:each="c : ${clients}" th:value="${c.id}" th:text="${c.nom + ' ' + c.prenom}"></option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label">Zone Livraison :</label>
+                <select class="form-select" th:field="*{idZoneLivraison}" required>
+                    <option value="">-- Sélectionner une zone --</option>
+                    <option th:each="z : ${zones}" th:value="${z.id}" th:text="${z.libelle + ' (' + z.prix + ' €)'}"></option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label">Date :</label>
+                <input type="date" class="form-control" th:field="*{dateCommande}" required />
+            </div>
+        </div>
+
+        <h4>Plats commandés</h4>
+        <table class="table table-bordered" id="tablePlats">
+            <thead>
+                <tr>
+                    <th>Plat</th>
+                    <th>Quantité</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="lignesContainer">
+                <tr th:each="ligne, stat : *{lignes}">
+                    <td>
+                        <select class="form-select" th:field="*{lignes[__${stat.index}__].idPlat}" required>
+                            <option value="">-- Plat --</option>
+                            <option th:each="p : ${plats}" th:value="${p.id}" th:text="${p.nom + ' - ' + p.prixVente + ' €'}"></option>
                         </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Date Commande :</label>
-                        <input type="date" th:field="*{dateCommande}" required class="form-control" />
-                    </div>
-                    <div class="form-group">
-                        <label>Zone de Livraison :</label>
-                        <select th:field="*{zoneLivraison}" class="form-control">
-                            <option value="">-- Aucune (Sur place) --</option>
-                            <option th:each="z : ${zones}" th:value="${z.id}" th:text="${z.libelle + ' (' + z.prix + ' Ar)'}"></option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Montant Total (Ar) :</label>
-                        <input type="number" step="0.01" th:field="*{montantTotal}" required class="form-control" />
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-success">Enregistrer</button>
-                        <a th:href="@{/commandes}" class="btn btn-secondary">Annuler</a>
-                    </div>
-                </form>
-            </section>
-        </main>
-    </div>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" class="form-control" th:field="*{lignes[__${stat.index}__].quantite}" required />
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">Supprimer</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <button type="button" class="btn btn-secondary mb-3" onclick="ajouterLigne()">+ Ajouter un plat</button>
+        <br>
+        <button type="submit" class="btn btn-success">Enregistrer la commande</button>
+        <a th:href="@{/commandes}" class="btn btn-outline-secondary">Annuler</a>
+    </form>
+
+    <script th:inline="javascript">
+        let platsList = /*[[${plats}]]*/ [];
+        
+        function ajouterLigne() {
+            let container = document.getElementById("lignesContainer");
+            let index = container.children.length;
+
+            let optionsHtml = '<option value="">-- Plat --</option>';
+            platsList.forEach(p => {
+                optionsHtml += `<option value="${p.id}">${p.nom} - ${p.prixVente} €</option>`;
+            });
+
+            let tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>
+                    <select name="lignes[${index}].idPlat" class="form-select" required>
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" step="0.01" name="lignes[${index}].quantite" value="1" class="form-control" required />
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">Supprimer</button>
+                </td>
+            `;
+            container.appendChild(tr);
+        }
+    </script>
 </body>
 </html>

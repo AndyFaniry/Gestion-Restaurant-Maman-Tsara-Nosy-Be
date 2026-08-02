@@ -25,7 +25,7 @@
                             <td th:text="${p.nom}">Nom</td>
                             <td th:text="${p.prenom}">Prénom</td>
                             <td th:text="${p.contact}">0320000000</td>
-                            <td th:text="${p.rolePersonnels != null ? p.rolePersonnels.libelle : 'N/A'}">Rôle</td>
+                            <td th-text="${p.roleLibelle != null ? p.roleLibelle : 'N/A'}"></td>
                             <td th:text="${p.dateEmbauche}">2024-01-01</td>
                             <td class="actions">
                                 <a th:href="@{/personnels/edit/{id}(id=${p.id})}" class="btn btn-warning">Modifier</a>

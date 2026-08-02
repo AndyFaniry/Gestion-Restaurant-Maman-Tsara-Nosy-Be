@@ -4,7 +4,7 @@
 + [ ] donnée dans la base de donnée plus statique
 + [ ] utiliser graphe
 
-| module        | fonction                                                                                                                                                    | priorite      | description                       | etat    | duree estimer | temps ecouler |
+| module        | fonction                                                                                                                                                     | priorite      | description                       | etat    | duree estimer | temps ecouler |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- | --------------------------------- | ------- | ------------- | ------------- |
 | Unite         | -convertisseur unité                                                                                                                                        | priorité     | l kg cm³ mm g et tout            | encours |               |               |
 | Fournisseur   | inserer fournisseur crud                                                                                                                                     | fonctionnele  |                                   |         |               | ok            |

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Détails de la Commande</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+
+    <h2>Détails de la Commande #<span th:text="${commande.id}"></span></h2>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <p><strong>Client :</strong> <span th:text="${commande.client.nom + ' ' + commande.client.prenom}"></span></p>
+            <p><strong>Date :</strong> <span th:text="${commande.dateCommande}"></span></p>
+            <p><strong>Zone de Livraison :</strong> <span th:text="${commande.zoneLivraison.libelle}"></span> (<span th:text="${commande.zoneLivraison.prix}"></span> €)</p>
+            <p><strong>Montant Total :</strong> <span class="badge bg-success fs-6" th:text="${commande.montantTotal + ' €'}"></span></p>
+        </div>
+    </div>
+
+    <h4>Liste des Plats</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Plat</th>
+                <th>Prix Unitaire</th>
+                <th>Quantité</th>
+                <th>Montant</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="d : ${details}">
+                <td th:text="${d.plat.nom}"></td>
+                <td th:text="${d.prixUnitaire + ' €'}"></td>
+                <td th:text="${d.quantite}"></td>
+                <td th:text="${d.montant + ' €'}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a th:href="@{/commandes/edit/{id}(id=${commande.id})}" class="btn btn-warning">Modifier</a>
+    <a th:href="@{/commandes}" class="btn btn-secondary">Retour</a>
+
+</body>
+</html>
