@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : lun. 03 août 2026 00:51:40 EAT
+Date : lun. 03 août 2026 01:07:58 EAT
 
 
 ======================================
@@ -3244,9 +3244,7 @@ import com.gestion.restaurant.entity.commandes.FacturesCommandes;
 import com.gestion.restaurant.entity.ingredients.Ingredients;
 import com.gestion.restaurant.entity.livraisons.ZonesLivraison;
 import com.gestion.restaurant.entity.plats.Plats;
-import com.gestion.restaurant.exception.BusinessRuleException;
-import com.gestion.restaurant.exception.ResourceNotFoundException;
-import com.gestion.restaurant.service.ingredients.IngredientsService;
+import com.gestion.restaurant.entity.plats.RecettePlats;
 import com.gestion.restaurant.exception.BusinessRuleException;
 import com.gestion.restaurant.exception.ResourceNotFoundException;
 import com.gestion.restaurant.repository.clients.ClientsRepository;
@@ -3257,6 +3255,7 @@ import com.gestion.restaurant.repository.livraisons.ZoneLivraisonRepository;
 import com.gestion.restaurant.repository.plats.PlatsRepository;
 import com.gestion.restaurant.repository.recettes.RecettePlatsRepository;
 import com.gestion.restaurant.service.caisse.CaisseService;
+import com.gestion.restaurant.service.ingredients.IngredientsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -3285,7 +3284,7 @@ public class CommandesService {
                             PlatsRepository platsRepository,
                             RecettePlatsRepository recettePlatsRepository,
                             CaisseService caisseService,
-                        IngredientsService ingredientsService) {
+                            IngredientsService ingredientsService) {
         this.commandesRepository = commandesRepository;
         this.detailsCommandesRepository = detailsCommandesRepository;
         this.facturesCommandesRepository = facturesCommandesRepository;
@@ -3308,8 +3307,13 @@ public class CommandesService {
                 .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + id));
     }
 
+    @Transactional(readOnly = true)
+    public List<DetailsCommandes> findDetailsByCommandeId(Long commandeId) {
+        return detailsCommandesRepository.findByCommandeId(commandeId);
+    }
+
     @Transactional
-    public Commandes creereCommande(CommandeCreateRequestDto dto) {
+    public Commandes creereOuMettreAJourCommande(CommandeCreateRequestDto dto) {
         if (dto.getIdClient() == null) {
             throw new BusinessRuleException("Le client est obligatoire.");
         }
@@ -3328,26 +3332,22 @@ public class CommandesService {
 
         LocalDate dateMvt = dto.getDateCommande() != null ? dto.getDateCommande() : LocalDate.now();
 
-        // 1. Initialiser la commande avec le prix de la livraison
-        Commandes commande = new Commandes();
+        Commandes commande;
         if (dto.getId() != null) {
-        commande = findById(dto.getId());
-        // Supprimer les anciens détails pour réinsérer les nouveaux
-        detailsCommandesRepository.deleteByCommandeId(commande.getId());
-    } else {
-        commande = new Commandes();
-    }
+            commande = findById(dto.getId());
+            detailsCommandesRepository.deleteByCommandeId(commande.getId());
+        } else {
+            commande = new Commandes();
+        }
+
         commande.setClient(client);
         commande.setZoneLivraison(zone);
         commande.setDateCommande(dateMvt);
-        
-        BigDecimal montantTotalCommande = zone.getPrix();
 
-        // Sauvegarde temporaire pour avoir l'ID
-        commande.setMontantTotal(montantTotalCommande);
-        commande = commandesRepository.save(commande);
+        BigDecimal totalCumule = zone.getPrix();
+        commande.setMontantTotal(totalCumule);
+        Commandes commandeSauvegardee = commandesRepository.save(commande);
 
-        // 2. Traiter chaque ligne du panier
         for (CommandeLigneRequestDto ligneDto : dto.getLignes()) {
             if (ligneDto.getIdPlat() != null && ligneDto.getQuantite() != null && ligneDto.getQuantite().compareTo(BigDecimal.ZERO) > 0) {
                 Plats plat = platsRepository.findById(ligneDto.getIdPlat())
@@ -3356,7 +3356,7 @@ public class CommandesService {
                 BigDecimal montantLigne = plat.getPrixVente().multiply(ligneDto.getQuantite());
 
                 DetailsCommandes detail = new DetailsCommandes();
-                detail.setCommande(commande);
+                detail.setCommande(commandeSauvegardee);
                 detail.setPlat(plat);
                 detail.setQuantite(ligneDto.getQuantite());
                 detail.setPrixUnitaire(plat.getPrixVente());
@@ -3364,98 +3364,46 @@ public class CommandesService {
 
                 detailsCommandesRepository.save(detail);
 
-                montantTotalCommande = montantTotalCommande.add(montantLigne);
+                totalCumule = totalCumule.add(montantLigne);
+
+                // Déstockage automatique des ingrédients via les recettes
+                List<RecettePlats> recettes = recettePlatsRepository.findByPlatId(plat.getId());
+                for (RecettePlats rp : recettes) {
+                    Ingredients ingredient = rp.getIngredient();
+                    BigDecimal quantiteIngredientTotale = rp.getQuantiteRequise().multiply(ligneDto.getQuantite());
+                    
+                    ingredientsService.enregistrerSortieOuPerte(
+                            ingredient.getId(),
+                            quantiteIngredientTotale,
+                            "Sortie",
+                            dateMvt
+                    );
+                }
             }
         }
 
-        // Mettre à jour le montant global de la commande
-        commande.setMontantTotal(montantTotalCommande);
-        commande = commandesRepository.save(commande);
+        commandeSauvegardee.setMontantTotal(totalCumule);
+        Commandes commandeFinale = commandesRepository.save(commandeSauvegardee);
 
-        // 3. Générer la Facture
+        // Enregistrement de la facture et entrée en caisse
         FacturesCommandes facture = new FacturesCommandes();
-        facture.setCommande(commande);
+        facture.setCommande(commandeFinale);
         facture.setDateFacture(dateMvt);
-        facture.setMontantTotal(montantTotalCommande);
+        facture.setMontantTotal(totalCumule);
         facturesCommandesRepository.save(facture);
 
-        // 4. Mouvement Caisse Prioritaire (Entrée d'argent)
-        caisseService.enregistrerEntree(montantTotalCommande, dateMvt);
+        caisseService.enregistrerEntree(totalCumule, dateMvt);
 
-        return commande;
+        return commandeFinale;
     }
 
     @Transactional
     public void deleteById(Long id) {
         if (!commandesRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Commande introuvable : " + id);
+            throw new ResourceNotFoundException("Commande introuvable avec l'ID : " + id);
         }
+        detailsCommandesRepository.deleteByCommandeId(id);
         commandesRepository.deleteById(id);
-    }
-    @Transactional(readOnly = true)
-    public List<DetailsCommandes> findDetailsByCommandeId(Long idCommande) {
-        return detailsCommandesRepository.findByCommandeId(idCommande);
-    }
-
-    @Transactional
-    public Commandes creereOuMettreAJourCommande(CommandeCreateRequestDto dto) {
-        Commandes commande;
-        if (dto.getId() != null) {
-            commande = findById(dto.getId());
-            // Nettoyer les anciennes lignes pour la mise à jour
-            detailsCommandesRepository.deleteByCommandeId(commande.getId());
-        } else {
-            commande = new Commandes();
-        }
-
-        Clients client = clientsRepository.findById(dto.getIdClient())
-                .orElseThrow(() -> new ResourceNotFoundException("Client non trouvé : " + dto.getIdClient()));
-        ZonesLivraison zone = zoneLivraisonRepository.findById(dto.getIdZoneLivraison())
-                .orElseThrow(() -> new ResourceNotFoundException("Zone non trouvée : " + dto.getIdZoneLivraison()));
-
-        commande.setClient(client);
-        commande.setZoneLivraison(zone);
-        commande.setDateCommande(dto.getDateCommande() != null ? dto.getDateCommande() : LocalDate.now());
-
-        BigDecimal totalPlats = BigDecimal.ZERO;
-
-        // Sauvegarder d'abord pour avoir l'ID
-        commande = commandesRepository.save(commande);
-
-        if (dto.getLignes() != null) {
-            for (var ligneDto : dto.getLignes()) {
-                if (ligneDto.getIdPlat() == null || ligneDto.getQuantite() == null) continue;
-
-                Plats plat = platsRepository.findById(ligneDto.getIdPlat())
-                        .orElseThrow(() -> new ResourceNotFoundException("Plat non trouvé : " + ligneDto.getIdPlat()));
-
-                DetailsCommandes detail = new DetailsCommandes();
-                detail.setCommande(commande);
-                detail.setPlat(plat);
-                detail.setQuantite(ligneDto.getQuantite());
-                detail.setPrixUnitaire(plat.getPrixVente());
-                BigDecimal sousTotal = plat.getPrixVente().multiply(ligneDto.getQuantite());
-                detail.setMontant(sousTotal);
-
-                detailsCommandesRepository.save(detail);
-                totalPlats = totalPlats.add(sousTotal);
-
-                // Déduire les ingrédients du stock
-                recettePlatsRepository.findByPlatId(plat.getId()).forEach(r -> {
-                    BigDecimal qteIng = r.getQuantiteRequise().multiply(ligneDto.getQuantite());
-                    ingredientsService.enregistrerSortieOuPerte(r.getIngredient().getId(), qteIng, "Sortie", commande.getDateCommande());
-                });
-            }
-        }
-
-        BigDecimal montantTotal = totalPlats.add(zone.getPrix());
-        commande.setMontantTotal(montantTotal);
-        commandesRepository.save(commande);
-
-        // Enregistrer l'entrée d'argent en caisse
-        caisseService.enregistrerEntree(montantTotal, commande.getDateCommande());
-
-        return commande;
     }
 }
 
@@ -7363,6 +7311,9 @@ RESOURCE : src/main/resources/templates/commandes/detail.html
     <meta charset="UTF-8">
     <title>Détails de la Commande</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    
 </head>
 <body class="container mt-4">
 
@@ -7515,8 +7466,20 @@ RESOURCE : src/main/resources/templates/commandes/list.html
     <meta charset="UTF-8">
     <title>Commandes - Maman Tsara Nosy-Be</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    
 </head>
 <body>
+
+    <div class="d-flex">
+    <!-- Inclusion directe de la Sidebar -->
+    <div th:replace="~{fragments/sidebar :: sidebar('commandes')}"></div>
+
+    <!-- Conteneur principal de votre page Commandes -->
+    <main class="flex-grow-1 p-4">
+        
+        <!-- REMPLACER CE BLOC PAR VOTRE CONTENU ACTUEL DE LA PAGE COMMANDES -->
     <div class="dashboard-container">
         <main class="content">
             <header class="header">
@@ -7547,6 +7510,12 @@ RESOURCE : src/main/resources/templates/commandes/list.html
             </section>
         </main>
     </div>
+        
+    </main>
+    </div>
+
+
+
 </body>
 </html>
 
@@ -8393,11 +8362,10 @@ RESOURCE : src/main/resources/templates/layout/sidebar.html
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
     Personnels
   </a>
-
-  <a th:href="@{/zones-livraison}" class="nav-link">
-        <i class="fas fa-truck nav-icon"></i>
-        <p>Zones de Livraison</p>
-    </a>
+  <a th:href="@{/zones-livraison}" class="nav-item" th:classappend="${activeMenu == 'zones-livraison'} ? 'active'">
+    <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2" ry="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    Zones de Livraison
+  </a>
 
   <div class="sidebar-bottom">
     <div class="user-row">
@@ -8412,6 +8380,7 @@ RESOURCE : src/main/resources/templates/layout/sidebar.html
 
 </body>
 </html>
+
 
 ======================================
 RESOURCE : src/main/resources/templates/materielles/detail.html
