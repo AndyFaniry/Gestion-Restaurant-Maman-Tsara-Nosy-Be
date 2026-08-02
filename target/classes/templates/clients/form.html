@@ -15,7 +15,7 @@
 
     <div class="main">
         <!-- Topbar globale avec titre dynamique -->
-        <div th:replace="~{fragments/layout :: topbar(${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'})}"></div>
+        <div th:replace="~{fragments/layout :: topbar(${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'})}"></div
 
         <div class="content">
             <div class="page-header">
@@ -48,7 +48,8 @@
 
                         <div class="form-group">
                             <label for="typeClient">Type de Client :</label>
-                            <select id="typeClient" th:field="*{typeClient.id}" required class="form-control">
+                            <!-- Correction ici : binding sur idTypeClient -->
+                            <select id="typeClient" th:field="*{idTypeClient}" required class="form-control">
                                 <option value="">-- Sélectionner un type --</option>
                                 <option th:each="type : ${typesClient}" 
                                         th:value="${type.id}" 

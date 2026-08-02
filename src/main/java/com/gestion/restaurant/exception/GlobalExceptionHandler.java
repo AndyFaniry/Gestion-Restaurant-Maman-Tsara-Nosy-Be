@@ -17,7 +17,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessRuleException.class)
     public String handleBusinessRule(BusinessRuleException ex, RedirectAttributes redirectAttributes) {
         redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
-        return "redirect:/materielles";
+        return "redirect:/clients";
     }
 
     @ExceptionHandler(Exception.class)

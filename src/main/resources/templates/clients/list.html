@@ -10,7 +10,7 @@
 <div class="app">
 
   <!-- Sidebar réutilisée avec l'onglet active 'clients' -->
-  <aside th:replace="~{fragments/layout :: sidebar('clients')}"></aside>
+<div th:replace="~{fragments/layout :: topbar('Liste des Clients')}"></div>
 
   <div class="main">
     <!-- Topbar réutilisée -->
@@ -43,7 +43,7 @@
               <td th:text="${client.nom}">Nom</td>
               <td th:text="${client.prenom}">Prénom</td>
               <td th:text="${client.contact}">Contact</td>
-              <td th:text="${client.typeClient != null ? client.typeClient.libelle : '-'}">Type</td>
+              <td th:text="${client.typeClientLibelle != null ? client.typeClientLibelle : '-'}"></td>
               <td>
                 <a th:href="@{/clients/edit/{id}(id=${client.id})}" class="btn btn-sm btn-secondary">Modifier</a>
                 <a th:href="@{/clients/delete/{id}(id=${client.id})}" class="btn btn-sm btn-danger">Supprimer</a>

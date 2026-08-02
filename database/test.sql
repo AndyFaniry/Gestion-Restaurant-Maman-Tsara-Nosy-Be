@@ -273,3 +273,4 @@ VALUES (1, '2026-07-30', 45000.000, 1);
 INSERT INTO mouvementcaisse (id, datemouvement, montant, typemouvement) VALUES 
 (2, '2025-03-15', 890000.000, 1),  -- Achat Fournisseur : caisse enregistreuse
 (3, '2026-07-25',  45000.000, 2);  -- Frais Généraux : maintenance caisse enregistreuse
+INSERT INTO raisonabsence (libelle) VALUES ('Maladie'), ('Congé Payé'), ('Absence Injustifiée'), ('Maternité/Paternité') ON CONFLICT DO NOTHING

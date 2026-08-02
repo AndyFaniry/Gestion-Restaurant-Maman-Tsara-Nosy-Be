@@ -1,8 +1,7 @@
 package com.gestion.restaurant.controller.client;
 
-import com.gestion.restaurant.entity.clients.Clients;
-import com.gestion.restaurant.repository.clients.ClientsRepository;
-import com.gestion.restaurant.repository.clients.TypeClientRepository;
+import com.gestion.restaurant.dto.clients.*;
+import com.gestion.restaurant.service.clients.ClientsService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -11,45 +10,42 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/clients")
 public class ClientsController {
 
-    private final ClientsRepository clientsRepository;
-    private final TypeClientRepository typeClientRepository;
+    private final ClientsService clientsService;
 
-    public ClientsController(ClientsRepository clientsRepository, TypeClientRepository typeClientRepository) {
-        this.clientsRepository = clientsRepository;
-        this.typeClientRepository = typeClientRepository;
+    public ClientsController(ClientsService clientsService) {
+        this.clientsService = clientsService;
     }
 
     @GetMapping
-    public String listClients(Model model) {
-        model.addAttribute("clientsList", clientsRepository.findAll());
+    public String listClients(@ModelAttribute("criteria") ClientSearchCriteria criteria, Model model) {
+        model.addAttribute("clientsList", clientsService.search(criteria));
+        model.addAttribute("typesClient", clientsService.findAllTypes());
         return "clients/list";
     }
 
     @GetMapping("/new")
     public String showCreateForm(Model model) {
-        model.addAttribute("client", new Clients());
-        model.addAttribute("typesClient", typeClientRepository.findAll());
+        model.addAttribute("client", new ClientRequestDto());
+        model.addAttribute("typesClient", clientsService.findAllTypes());
         return "clients/form";
     }
 
     @PostMapping("/save")
-    public String saveClient(@ModelAttribute("client") Clients client) {
-        clientsRepository.save(client);
+    public String saveClient(@ModelAttribute("client") ClientRequestDto dto) {
+        clientsService.saveFromDto(dto);
         return "redirect:/clients";
     }
 
     @GetMapping("/edit/{id}")
     public String showEditForm(@PathVariable("id") Long id, Model model) {
-        Clients client = clientsRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("ID Client invalide:" + id));
-        model.addAttribute("client", client);
-        model.addAttribute("typesClient", typeClientRepository.findAll());
+        model.addAttribute("client", clientsService.findDtoById(id));
+        model.addAttribute("typesClient", clientsService.findAllTypes());
         return "clients/form";
     }
 
     @GetMapping("/delete/{id}")
     public String deleteClient(@PathVariable("id") Long id) {
-        clientsRepository.deleteById(id);
+        clientsService.deleteById(id);
         return "redirect:/clients";
     }
 }

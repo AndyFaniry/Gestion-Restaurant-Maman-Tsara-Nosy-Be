@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : dim. 02 août 2026 02:27:26 EAT
+Date : dim. 02 août 2026 20:54:37 EAT
 
 
 ======================================
@@ -67,9 +67,8 @@ FILE : src/main/java/com/gestion/restaurant/controller/client/ClientsController.
 ======================================
 package com.gestion.restaurant.controller.client;
 
-import com.gestion.restaurant.entity.clients.Clients;
-import com.gestion.restaurant.repository.clients.ClientsRepository;
-import com.gestion.restaurant.repository.clients.TypeClientRepository;
+import com.gestion.restaurant.dto.clients.*;
+import com.gestion.restaurant.service.clients.ClientsService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -78,45 +77,42 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/clients")
 public class ClientsController {
 
-    private final ClientsRepository clientsRepository;
-    private final TypeClientRepository typeClientRepository;
+    private final ClientsService clientsService;
 
-    public ClientsController(ClientsRepository clientsRepository, TypeClientRepository typeClientRepository) {
-        this.clientsRepository = clientsRepository;
-        this.typeClientRepository = typeClientRepository;
+    public ClientsController(ClientsService clientsService) {
+        this.clientsService = clientsService;
     }
 
     @GetMapping
-    public String listClients(Model model) {
-        model.addAttribute("clientsList", clientsRepository.findAll());
+    public String listClients(@ModelAttribute("criteria") ClientSearchCriteria criteria, Model model) {
+        model.addAttribute("clientsList", clientsService.search(criteria));
+        model.addAttribute("typesClient", clientsService.findAllTypes());
         return "clients/list";
     }
 
     @GetMapping("/new")
     public String showCreateForm(Model model) {
-        model.addAttribute("client", new Clients());
-        model.addAttribute("typesClient", typeClientRepository.findAll());
+        model.addAttribute("client", new ClientRequestDto());
+        model.addAttribute("typesClient", clientsService.findAllTypes());
         return "clients/form";
     }
 
     @PostMapping("/save")
-    public String saveClient(@ModelAttribute("client") Clients client) {
-        clientsRepository.save(client);
+    public String saveClient(@ModelAttribute("client") ClientRequestDto dto) {
+        clientsService.saveFromDto(dto);
         return "redirect:/clients";
     }
 
     @GetMapping("/edit/{id}")
     public String showEditForm(@PathVariable("id") Long id, Model model) {
-        Clients client = clientsRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("ID Client invalide:" + id));
-        model.addAttribute("client", client);
-        model.addAttribute("typesClient", typeClientRepository.findAll());
+        model.addAttribute("client", clientsService.findDtoById(id));
+        model.addAttribute("typesClient", clientsService.findAllTypes());
         return "clients/form";
     }
 
     @GetMapping("/delete/{id}")
     public String deleteClient(@PathVariable("id") Long id) {
-        clientsRepository.deleteById(id);
+        clientsService.deleteById(id);
         return "redirect:/clients";
     }
 }
@@ -572,57 +568,85 @@ FILE : src/main/java/com/gestion/restaurant/controller/personnels/PersonnelsCont
 ======================================
 package com.gestion.restaurant.controller.personnels;
 
-import com.gestion.restaurant.entity.personnels.Personnels;
-import com.gestion.restaurant.repository.personnels.PersonnelsRepository;
-import com.gestion.restaurant.repository.personnels.RolePersonnelsRepository;
+import com.gestion.restaurant.dto.personnels.*;
+import com.gestion.restaurant.service.personnels.PersonnelsService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Controller
 @RequestMapping("/personnels")
 public class PersonnelsController {
 
-    private final PersonnelsRepository personnelsRepository;
-    private final RolePersonnelsRepository roleRepo;
+    private final PersonnelsService personnelsService;
 
-    public PersonnelsController(PersonnelsRepository personnelsRepository, RolePersonnelsRepository roleRepo) {
-        this.personnelsRepository = personnelsRepository;
-        this.roleRepo = roleRepo;
+    public PersonnelsController(PersonnelsService personnelsService) {
+        this.personnelsService = personnelsService;
     }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("personnelsList", personnelsRepository.findAll());
+    public String list(@ModelAttribute("criteria") PersonnelSearchCriteria criteria, Model model) {
+        model.addAttribute("personnelsList", personnelsService.search(criteria));
+        model.addAttribute("roles", personnelsService.findAllRoles());
         return "personnels/list";
     }
 
     @GetMapping("/new")
     public String showCreate(Model model) {
-        model.addAttribute("personnel", new Personnels());
-        model.addAttribute("roles", roleRepo.findAll());
+        model.addAttribute("personnel", new PersonnelRequestDto());
+        model.addAttribute("roles", personnelsService.findAllRoles());
         return "personnels/form";
     }
 
     @PostMapping("/save")
-    public String save(@ModelAttribute("personnel") Personnels personnel) {
-        personnelsRepository.save(personnel);
-        return "redirect:/personnels";
+    public String save(@ModelAttribute("personnel") PersonnelRequestDto dto) {
+        PersonnelResponseDto saved = personnelsService.saveFromDto(dto);
+        return "redirect:/personnels/" + saved.getId() + "/detail";
     }
 
     @GetMapping("/edit/{id}")
     public String showEdit(@PathVariable("id") Long id, Model model) {
-        Personnels p = personnelsRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Employé introuvable : " + id));
-        model.addAttribute("personnel", p);
-        model.addAttribute("roles", roleRepo.findAll());
+        model.addAttribute("personnel", personnelsService.findDtoById(id));
+        model.addAttribute("roles", personnelsService.findAllRoles());
         return "personnels/form";
     }
 
     @GetMapping("/delete/{id}")
     public String delete(@PathVariable("id") Long id) {
-        personnelsRepository.deleteById(id);
+        personnelsService.deleteById(id);
         return "redirect:/personnels";
+    }
+
+    @GetMapping("/{id}/detail")
+    public String detail(@PathVariable("id") Long id, Model model) {
+        model.addAttribute("personnel", personnelsService.findById(id));
+        model.addAttribute("historiquePaie", personnelsService.findHistoriquePaie(id));
+        model.addAttribute("absencesList", personnelsService.findAbsences(id));
+        model.addAttribute("raisonsAbsence", personnelsService.findAllRaisonsAbsence());
+        return "personnels/detail";
+    }
+
+    @PostMapping("/{id}/paie/save")
+    public String genererPaie(@PathVariable("id") Long id,
+                              @RequestParam("salaire") BigDecimal salaire,
+                              @RequestParam(value = "prime", required = false) BigDecimal prime,
+                              @RequestParam(value = "datePaie", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate datePaie) {
+        personnelsService.genererFichePaie(id, salaire, prime, datePaie);
+        return "redirect:/personnels/" + id + "/detail";
+    }
+
+    @PostMapping("/{id}/absence/save")
+    public String enregistrerAbsence(@PathVariable("id") Long id,
+                                     @RequestParam("dateDebut") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDebut,
+                                     @RequestParam("dateFin") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFin,
+                                     @RequestParam("idRaison") Long idRaison,
+                                     @RequestParam(value = "commentaire", required = false) String commentaire) {
+        personnelsService.enregistrerAbsence(id, dateDebut, dateFin, idRaison, commentaire);
+        return "redirect:/personnels/" + id + "/detail";
     }
 }
 
@@ -738,6 +762,77 @@ public class RecetteController {
         redirectAttributes.addFlashAttribute("success", "Ingrédient retiré de la recette.");
         return "redirect:/recettes/plat/" + idPlat;
     }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/clients/ClientMapper.java
+======================================
+package com.gestion.restaurant.dto.clients;
+
+import com.gestion.restaurant.entity.clients.Clients;
+
+public class ClientMapper {
+
+    public static ClientResponseDto toDto(Clients entity) {
+        if (entity == null) return null;
+        ClientResponseDto dto = new ClientResponseDto();
+        dto.setId(entity.getId());
+        dto.setNom(entity.getNom());
+        dto.setPrenom(entity.getPrenom());
+        dto.setContact(entity.getContact());
+        if (entity.getTypeClient() != null) {
+            dto.setIdTypeClient(entity.getTypeClient().getId());
+            dto.setTypeClientLibelle(entity.getTypeClient().getLibelle());
+        }
+        return dto;
+    }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/clients/ClientRequestDto.java
+======================================
+package com.gestion.restaurant.dto.clients;
+
+import lombok.Data;
+
+@Data
+public class ClientRequestDto {
+    private Long id;
+    private String nom;
+    private String prenom;
+    private String contact;
+    private Long idTypeClient;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/clients/ClientResponseDto.java
+======================================
+package com.gestion.restaurant.dto.clients;
+
+import lombok.Data;
+
+@Data
+public class ClientResponseDto {
+    private Long id;
+    private String nom;
+    private String prenom;
+    private String contact;
+    private Long idTypeClient;
+    private String typeClientLibelle;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/clients/ClientSearchCriteria.java
+======================================
+package com.gestion.restaurant.dto.clients;
+
+import lombok.Data;
+
+@Data
+public class ClientSearchCriteria {
+    private String nom;
+    private String prenom;
+    private Long idTypeClient;
 }
 
 ======================================
@@ -951,6 +1046,89 @@ public class MaterielSearchCriteria {
     
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate dateEntreeFin;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/personnels/PersonnelMapper.java
+======================================
+package com.gestion.restaurant.dto.personnels;
+
+import com.gestion.restaurant.entity.personnels.Personnels;
+
+public class PersonnelMapper {
+    public static PersonnelResponseDto toDto(Personnels entity) {
+        if (entity == null) return null;
+        PersonnelResponseDto dto = new PersonnelResponseDto();
+        dto.setId(entity.getId());
+        dto.setNom(entity.getNom());
+        dto.setPrenom(entity.getPrenom());
+        dto.setContact(entity.getContact());
+        dto.setDateEmbauche(entity.getDateEmbauche());
+        if (entity.getRolePersonnels() != null) {
+            dto.setIdRole(entity.getRolePersonnels().getId());
+            dto.setRoleLibelle(entity.getRolePersonnels().getLibelle());
+        }
+        return dto;
+    }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/personnels/PersonnelRequestDto.java
+======================================
+package com.gestion.restaurant.dto.personnels;
+
+import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Data
+public class PersonnelRequestDto {
+    private Long id;
+    private String nom;
+    private String prenom;
+    private String contact;
+    private Long idRole;
+    
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate dateEmbauche;
+    
+    private BigDecimal salaireBase;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/personnels/PersonnelResponseDto.java
+======================================
+package com.gestion.restaurant.dto.personnels;
+
+import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Data
+public class PersonnelResponseDto {
+    private Long id;
+    private String nom;
+    private String prenom;
+    private String contact;
+    private Long idRole;
+    private String roleLibelle;
+    private LocalDate dateEmbauche;
+    private BigDecimal salaireBase;
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/dto/personnels/PersonnelSearchCriteria.java
+======================================
+package com.gestion.restaurant.dto.personnels;
+
+import lombok.Data;
+
+@Data
+public class PersonnelSearchCriteria {
+    private String nom;
+    private String prenom;
+    private Long idRole;
 }
 
 ======================================
@@ -1840,6 +2018,43 @@ public class TypeMvtMaterielles {
 }
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/entity/personnels/AbsencePersonnels.java
+======================================
+package com.gestion.restaurant.entity.personnels;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "absencepersonnels")
+@Data
+@NoArgsConstructor
+public class AbsencePersonnels {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "idpersonnels", nullable = false)
+    private Personnels personnel;
+
+    @Column(name = "datedebut", nullable = false)
+    private LocalDate dateDebut;
+
+    @Column(name = "datefin", nullable = false)
+    private LocalDate dateFin;
+
+    @ManyToOne
+    @JoinColumn(name = "idraisonabsence", nullable = false)
+    private RaisonAbsence raisonAbsence;
+
+    @Column(length = 255)
+    private String commentaire;
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/entity/personnels/FichePaie.java
 ======================================
 package com.gestion.restaurant.entity.personnels;
@@ -1911,6 +2126,28 @@ public class Personnels {
     private LocalDate dateEmbauche;
 }
 
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/entity/personnels/RaisonAbsence.java
+======================================
+package com.gestion.restaurant.entity.personnels;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "raisonabsence")
+@Data
+@NoArgsConstructor
+public class RaisonAbsence {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 100)
+    private String libelle;
+}
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/entity/personnels/RolePersonnels.java
@@ -2114,12 +2351,12 @@ package com.gestion.restaurant.repository.clients;
 
 import com.gestion.restaurant.entity.clients.Clients;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ClientsRepository extends JpaRepository<Clients, Long> {
+public interface ClientsRepository extends JpaRepository<Clients, Long>, JpaSpecificationExecutor<Clients> {
 }
-
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/clients/TypeClientRepository.java
@@ -2472,6 +2709,21 @@ public interface TypeMvtMateriellesRepository extends JpaRepository<TypeMvtMater
 }
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/repository/personnels/AbsencePersonnelsRepository.java
+======================================
+package com.gestion.restaurant.repository.personnels;
+
+import com.gestion.restaurant.entity.personnels.AbsencePersonnels;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+@Repository
+public interface AbsencePersonnelsRepository extends JpaRepository<AbsencePersonnels, Long> {
+    List<AbsencePersonnels> findByPersonnel_IdOrderByDateDebutDesc(Long idPersonnel);
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/repository/personnels/FichePaieRepository.java
 ======================================
 package com.gestion.restaurant.repository.personnels;
@@ -2479,11 +2731,12 @@ package com.gestion.restaurant.repository.personnels;
 import com.gestion.restaurant.entity.personnels.FichePaie;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 
 @Repository
 public interface FichePaieRepository extends JpaRepository<FichePaie, Long> {
+    List<FichePaie> findByPersonnel_IdOrderByDatePaieDesc(Long idPersonnel);
 }
-
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/personnels/PersonnelsRepository.java
@@ -2492,12 +2745,25 @@ package com.gestion.restaurant.repository.personnels;
 
 import com.gestion.restaurant.entity.personnels.Personnels;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PersonnelsRepository extends JpaRepository<Personnels, Long> {
+public interface PersonnelsRepository extends JpaRepository<Personnels, Long>, JpaSpecificationExecutor<Personnels> {
 }
 
+======================================
+FILE : src/main/java/com/gestion/restaurant/repository/personnels/RaisonAbsenceRepository.java
+======================================
+package com.gestion.restaurant.repository.personnels;
+
+import com.gestion.restaurant.entity.personnels.RaisonAbsence;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface RaisonAbsenceRepository extends JpaRepository<RaisonAbsence, Long> {
+}
 
 ======================================
 FILE : src/main/java/com/gestion/restaurant/repository/personnels/RolePersonnelsRepository.java
@@ -2651,6 +2917,100 @@ public class CaisseService {
         mouvement.setTypeMouvement(type);
         return mouvementCaisseRepository.save(mouvement);
     }
+}
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/service/clients/ClientsService.java
+======================================
+package com.gestion.restaurant.service.clients;
+
+import com.gestion.restaurant.dto.clients.*;
+import com.gestion.restaurant.entity.clients.Clients;
+import com.gestion.restaurant.entity.clients.TypeClient;
+import com.gestion.restaurant.exception.BusinessRuleException;
+import com.gestion.restaurant.exception.ResourceNotFoundException;
+import com.gestion.restaurant.repository.clients.ClientsRepository;
+import com.gestion.restaurant.repository.clients.TypeClientRepository;
+import com.gestion.restaurant.specification.clients.ClientsSpecification;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class ClientsService {
+
+    private final ClientsRepository clientsRepository;
+    private final TypeClientRepository typeClientRepository;
+
+    public ClientsService(ClientsRepository clientsRepository, TypeClientRepository typeClientRepository) {
+        this.clientsRepository = clientsRepository;
+        this.typeClientRepository = typeClientRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClientResponseDto> search(ClientSearchCriteria criteria) {
+        Specification<Clients> spec = ClientsSpecification.withFilters(criteria);
+        return clientsRepository.findAll(spec).stream()
+                .map(ClientMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Clients findById(Long id) {
+        return clientsRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Client introuvable avec l'ID : " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public ClientRequestDto findDtoById(Long id) {
+        Clients c = findById(id);
+        ClientRequestDto dto = new ClientRequestDto();
+        dto.setId(c.getId());
+        dto.setNom(c.getNom());
+        dto.setPrenom(c.getPrenom());
+        dto.setContact(c.getContact());
+        if (c.getTypeClient() != null) dto.setIdTypeClient(c.getTypeClient().getId());
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TypeClient> findAllTypes() {
+        return typeClientRepository.findAll();
+    }
+
+    @Transactional
+    public ClientResponseDto saveFromDto(ClientRequestDto dto) {
+        if (dto.getNom() == null || dto.getNom().isBlank()) {
+            throw new BusinessRuleException("Le nom du client est obligatoire.");
+        }
+        if (dto.getIdTypeClient() == null) {
+            throw new BusinessRuleException("Le type de client est obligatoire.");
+        }
+
+        Clients client = (dto.getId() != null) ? findById(dto.getId()) : new Clients();
+        TypeClient typeClient = typeClientRepository.findById(dto.getIdTypeClient())
+                .orElseThrow(() -> new ResourceNotFoundException("Type client introuvable : " + dto.getIdTypeClient()));
+
+        client.setNom(dto.getNom());
+        client.setPrenom(dto.getPrenom());
+        client.setContact(dto.getContact());
+        client.setTypeClient(typeClient);
+
+        return ClientMapper.toDto(clientsRepository.save(client));
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        if (!clientsRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Client introuvable avec l'ID : " + id);
+        }
+        clientsRepository.deleteById(id);
+    }
+
+    
 }
 
 ======================================
@@ -2980,9 +3340,9 @@ public class IngredientsService {
             .collect(Collectors.toList());
 }
 
-    public Object findAll() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'findAll'");
+    @Transactional(readOnly = true)
+    public List<Ingredients> findAll() {
+        return ingredientsRepository.findAll();
     }
 }
 
@@ -3325,6 +3685,182 @@ public class MateriellesService {
 }
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/service/personnels/PersonnelsService.java
+======================================
+package com.gestion.restaurant.service.personnels;
+
+import com.gestion.restaurant.dto.personnels.*;
+import com.gestion.restaurant.entity.personnels.*;
+import com.gestion.restaurant.exception.BusinessRuleException;
+import com.gestion.restaurant.exception.ResourceNotFoundException;
+import com.gestion.restaurant.repository.personnels.*;
+import com.gestion.restaurant.service.caisse.CaisseService;
+import com.gestion.restaurant.specification.personnels.PersonnelsSpecification;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class PersonnelsService {
+
+    private final PersonnelsRepository personnelsRepository;
+    private final RolePersonnelsRepository roleRepo;
+    private final FichePaieRepository fichePaieRepo;
+    private final AbsencePersonnelsRepository absenceRepo;
+    private final RaisonAbsenceRepository raisonAbsenceRepo;
+    private final CaisseService caisseService;
+
+    public PersonnelsService(PersonnelsRepository personnelsRepository,
+                             RolePersonnelsRepository roleRepo,
+                             FichePaieRepository fichePaieRepo,
+                             AbsencePersonnelsRepository absenceRepo,
+                             RaisonAbsenceRepository raisonAbsenceRepo,
+                             CaisseService caisseService) {
+        this.personnelsRepository = personnelsRepository;
+        this.roleRepo = roleRepo;
+        this.fichePaieRepo = fichePaieRepo;
+        this.absenceRepo = absenceRepo;
+        this.raisonAbsenceRepo = raisonAbsenceRepo;
+        this.caisseService = caisseService;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PersonnelResponseDto> search(PersonnelSearchCriteria criteria) {
+        Specification<Personnels> spec = PersonnelsSpecification.withFilters(criteria);
+        return personnelsRepository.findAll(spec).stream()
+                .map(PersonnelMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Personnels findById(Long id) {
+        return personnelsRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable avec l'ID : " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public PersonnelRequestDto findDtoById(Long id) {
+        Personnels p = findById(id);
+        PersonnelRequestDto dto = new PersonnelRequestDto();
+        dto.setId(p.getId());
+        dto.setNom(p.getNom());
+        dto.setPrenom(p.getPrenom());
+        dto.setContact(p.getContact());
+        dto.setDateEmbauche(p.getDateEmbauche());
+        if (p.getRolePersonnels() != null) dto.setIdRole(p.getRolePersonnels().getId());
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<RolePersonnels> findAllRoles() {
+        return roleRepo.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RaisonAbsence> findAllRaisonsAbsence() {
+        return raisonAbsenceRepo.findAll();
+    }
+
+    @Transactional
+    public PersonnelResponseDto saveFromDto(PersonnelRequestDto dto) {
+        if (dto.getNom() == null || dto.getNom().isBlank()) {
+            throw new BusinessRuleException("Le nom du personnel est obligatoire.");
+        }
+        if (dto.getIdRole() == null) {
+            throw new BusinessRuleException("Le rôle est obligatoire.");
+        }
+
+        Personnels p = (dto.getId() != null) ? findById(dto.getId()) : new Personnels();
+        RolePersonnels role = roleRepo.findById(dto.getIdRole())
+                .orElseThrow(() -> new ResourceNotFoundException("Rôle introuvable : " + dto.getIdRole()));
+
+        p.setNom(dto.getNom());
+        p.setPrenom(dto.getPrenom());
+        p.setContact(dto.getContact());
+        p.setDateEmbauche(dto.getDateEmbauche() != null ? dto.getDateEmbauche() : LocalDate.now());
+        p.setRolePersonnels(role);
+
+        return PersonnelMapper.toDto(personnelsRepository.save(p));
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        if (!personnelsRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Employé introuvable avec l'ID : " + id);
+        }
+        personnelsRepository.deleteById(id);
+    }
+
+    // ───────────────────────── Paie & Salaire ─────────────────────────
+
+    @Transactional
+    public FichePaie genererFichePaie(Long idPersonnel, BigDecimal salaire, BigDecimal prime, LocalDate datePaie) {
+        Personnels p = findById(idPersonnel);
+        
+        if (salaire == null || salaire.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("Le salaire de base doit être supérieur à zéro.");
+        }
+
+        BigDecimal total = salaire.add(prime != null ? prime : BigDecimal.ZERO);
+        LocalDate date = (datePaie != null) ? datePaie : LocalDate.now();
+
+        FichePaie fp = new FichePaie();
+        fp.setPersonnel(p);
+        fp.setDatePaie(date);
+        fp.setSalaire(salaire);
+        fp.setMontantTotal(total);
+
+        FichePaie saved = fichePaieRepo.save(fp);
+
+        // Sortie d'argent automatique en Caisse (Paiement des salaires)
+        caisseService.enregistrerSortie(total, date);
+
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public List<FichePaie> findHistoriquePaie(Long idPersonnel) {
+        return fichePaieRepo.findByPersonnel_IdOrderByDatePaieDesc(idPersonnel);
+    }
+
+    // ───────────────────────── Absences ─────────────────────────
+
+    @Transactional
+    public AbsencePersonnels enregistrerAbsence(Long idPersonnel, LocalDate dateDebut, LocalDate dateFin, Long idRaison, String commentaire) {
+        Personnels p = findById(idPersonnel);
+
+        if (dateDebut == null || dateFin == null) {
+            throw new BusinessRuleException("Les dates de début et de fin d'absence sont requises.");
+        }
+        if (dateFin.isBefore(dateDebut)) {
+            throw new BusinessRuleException("La date de fin ne peut pas être antérieure à la date de début.");
+        }
+
+        RaisonAbsence raison = raisonAbsenceRepo.findById(idRaison)
+                .orElseThrow(() -> new ResourceNotFoundException("Motif d'absence introuvable : " + idRaison));
+
+        AbsencePersonnels abs = new AbsencePersonnels();
+        abs.setPersonnel(p);
+        abs.setDateDebut(dateDebut);
+        abs.setDateFin(dateFin);
+        abs.setRaisonAbsence(raison);
+        abs.setCommentaire(commentaire);
+
+        return absenceRepo.save(abs);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AbsencePersonnels> findAbsences(Long idPersonnel) {
+        return absenceRepo.findByPersonnel_IdOrderByDateDebutDesc(idPersonnel);
+    }
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/service/plats/PlatsService.java
 ======================================
 package com.gestion.restaurant.service.plats;
@@ -3555,6 +4091,40 @@ public class UniteService {
 }
 
 ======================================
+FILE : src/main/java/com/gestion/restaurant/specification/clients/ClientsSpecification.java
+======================================
+package com.gestion.restaurant.specification.clients;
+
+import com.gestion.restaurant.dto.clients.ClientSearchCriteria;
+import com.gestion.restaurant.entity.clients.Clients;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class ClientsSpecification {
+
+    public static Specification<Clients> withFilters(ClientSearchCriteria criteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (criteria.getNom() != null && !criteria.getNom().isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("nom")), "%" + criteria.getNom().toLowerCase() + "%"));
+            }
+            if (criteria.getPrenom() != null && !criteria.getPrenom().isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("prenom")), "%" + criteria.getPrenom().toLowerCase() + "%"));
+            }
+            if (criteria.getIdTypeClient() != null) {
+                predicates.add(cb.equal(root.get("typeClient").get("id"), criteria.getIdTypeClient()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}
+
+======================================
 FILE : src/main/java/com/gestion/restaurant/specification/ingredients/IngredientsSpecification.java
 ======================================
 package com.gestion.restaurant.specification.ingredients;
@@ -3643,6 +4213,40 @@ public class MateriellesSpecification {
     }
 }
 
+
+======================================
+FILE : src/main/java/com/gestion/restaurant/specification/personnels/PersonnelsSpecification.java
+======================================
+package com.gestion.restaurant.specification.personnels;
+
+import com.gestion.restaurant.dto.personnels.PersonnelSearchCriteria;
+import com.gestion.restaurant.entity.personnels.Personnels;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class PersonnelsSpecification {
+
+    public static Specification<Personnels> withFilters(PersonnelSearchCriteria criteria) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (criteria.getNom() != null && !criteria.getNom().isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("nom")), "%" + criteria.getNom().toLowerCase() + "%"));
+            }
+            if (criteria.getPrenom() != null && !criteria.getPrenom().isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("prenom")), "%" + criteria.getPrenom().toLowerCase() + "%"));
+            }
+            if (criteria.getIdRole() != null) {
+                predicates.add(cb.equal(root.get("rolePersonnels").get("id"), criteria.getIdRole()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+}
 
 ======================================
 FILE : database/add-column.sql
@@ -3883,6 +4487,7 @@ CREATE TABLE AbsencePersonnels(
     dateDebut Date NOT NULL,
     dateFin Date CHECK(dateFin IS NULL OR dateFin >= dateDebut),
     idRaisonAbsence INT NOT NULL,
+    commentaire VARCHAR(255),
     Foreign KEY (idPersonnels) REFERENCES Personnels(id),
     Foreign KEY (idRaisonAbsence) REFERENCES RaisonAbsence(id)
 );
@@ -4320,6 +4925,7 @@ VALUES (1, '2026-07-30', 45000.000, 1);
 INSERT INTO mouvementcaisse (id, datemouvement, montant, typemouvement) VALUES 
 (2, '2025-03-15', 890000.000, 1),  -- Achat Fournisseur : caisse enregistreuse
 (3, '2026-07-25',  45000.000, 2);  -- Frais Généraux : maintenance caisse enregistreuse
+INSERT INTO raisonabsence (libelle) VALUES ('Maladie'), ('Congé Payé'), ('Absence Injustifiée'), ('Maternité/Paternité') ON CONFLICT DO NOTHING
 
 ======================================
 FILE : database/vider.sql
@@ -6042,7 +6648,7 @@ RESOURCE : src/main/resources/templates/clients/form.html
 
     <div class="main">
         <!-- Topbar globale avec titre dynamique -->
-        <div th:replace="~{fragments/layout :: topbar(${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'})}"></div>
+        <div th:replace="~{fragments/layout :: topbar(${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'})}"></div
 
         <div class="content">
             <div class="page-header">
@@ -6075,7 +6681,8 @@ RESOURCE : src/main/resources/templates/clients/form.html
 
                         <div class="form-group">
                             <label for="typeClient">Type de Client :</label>
-                            <select id="typeClient" th:field="*{typeClient.id}" required class="form-control">
+                            <!-- Correction ici : binding sur idTypeClient -->
+                            <select id="typeClient" th:field="*{idTypeClient}" required class="form-control">
                                 <option value="">-- Sélectionner un type --</option>
                                 <option th:each="type : ${typesClient}" 
                                         th:value="${type.id}" 
@@ -6114,7 +6721,7 @@ RESOURCE : src/main/resources/templates/clients/list.html
 <div class="app">
 
   <!-- Sidebar réutilisée avec l'onglet active 'clients' -->
-  <aside th:replace="~{fragments/layout :: sidebar('clients')}"></aside>
+<div th:replace="~{fragments/layout :: topbar('Liste des Clients')}"></div>
 
   <div class="main">
     <!-- Topbar réutilisée -->
@@ -6147,7 +6754,7 @@ RESOURCE : src/main/resources/templates/clients/list.html
               <td th:text="${client.nom}">Nom</td>
               <td th:text="${client.prenom}">Prénom</td>
               <td th:text="${client.contact}">Contact</td>
-              <td th:text="${client.typeClient != null ? client.typeClient.libelle : '-'}">Type</td>
+              <td th:text="${client.typeClientLibelle != null ? client.typeClientLibelle : '-'}"></td>
               <td>
                 <a th:href="@{/clients/edit/{id}(id=${client.id})}" class="btn btn-sm btn-secondary">Modifier</a>
                 <a th:href="@{/clients/delete/{id}(id=${client.id})}" class="btn btn-sm btn-danger">Supprimer</a>
@@ -6496,7 +7103,6 @@ RESOURCE : src/main/resources/templates/fournisseurs/list.html
 ======================================
 RESOURCE : src/main/resources/templates/fragments/layout.html
 ======================================
-<!-- src/main/resources/templates/fragments/layout.html -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
 <head>
@@ -6510,6 +7116,11 @@ RESOURCE : src/main/resources/templates/fragments/layout.html
 </head>
 <body class="d-flex flex-column min-vh-100 bg-light">
 
+    <!-- Define the topbar fragment accepting a title parameter -->
+    <div th:fragment="topbar(title)">
+        <h1 th:text="${title}">Default Title</h1>
+    </div>
+    
     <!-- Header & Navbar globale -->
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -6521,33 +7132,34 @@ RESOURCE : src/main/resources/templates/fragments/layout.html
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <!-- Fragment Navigation / Sidebar accessible indépendamment -->
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0" th:fragment="sidebar(activeTab)">
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/dashboard}">Tableau de Bord</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'dashboard'} ? 'active'" th:href="@{/dashboard}">Tableau de Bord</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" th:href="@{/ingredients}">Ingrédients</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'ingredients'} ? 'active'" th:href="@{/ingredients}">Ingrédients</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/materielles}">Matériels</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'materielles'} ? 'active'" th:href="@{/materielles}">Matériels</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/plats}">Plats</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'plats'} ? 'active'" th:href="@{/plats}">Plats</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/commandes}">Commandes</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'commandes'} ? 'active'" th:href="@{/commandes}">Commandes</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/fournisseurs}">Fournisseurs</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'fournisseurs'} ? 'active'" th:href="@{/fournisseurs}">Fournisseurs</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/clients}">Clients</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'clients'} ? 'active'" th:href="@{/clients}">Clients</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/personnels}">Personnels</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'personnels'} ? 'active'" th:href="@{/personnels}">Personnels</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/caisse}">Caisse</a>
+                            <a class="nav-link" th:classappend="${activeTab == 'caisse'} ? 'active'" th:href="@{/caisse}">Caisse</a>
                         </li>
                     </ul>
                 </div>
@@ -7423,6 +8035,136 @@ RESOURCE : src/main/resources/templates/materielles/list.html
 
 <div th:replace="~{layout/footer :: footer}"></div>
 <th:block th:replace="~{layout/scripts :: scripts}"></th:block>
+
+</body>
+</html>
+
+======================================
+RESOURCE : src/main/resources/templates/personnels/detail.html
+======================================
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Détails du Personnel</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Fiche Employé : <span th:text="${personnel.nom + ' ' + personnel.prenom}"></span></h2>
+        <a href="/personnels" class="btn btn-secondary">Retour à la liste</a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card p-3 shadow-sm">
+                <h4>Informations Générales</h4>
+                <p><strong>Poste / Rôle :</strong> <span th:text="${personnel.rolePersonnels.libelle}"></span></p>
+                <p><strong>Contact :</strong> <span th:text="${personnel.contact}"></span></p>
+                <p><strong>Date d'embauche :</strong> <span th:text="${personnel.dateEmbauche}"></span></p>
+            </div>
+        </div>
+
+        <!-- Formulaire de Paiement / Fiche de Paie -->
+        <div class="col-md-6">
+            <div class="card p-3 shadow-sm">
+                <h4>Émettre une Fiche de Paie</h4>
+                <form th:action="@{/personnels/{id}/paie/save(id=${personnel.id})}" method="post">
+                    <div class="mb-2">
+                        <label>Salaire de base :</label>
+                        <input type="number" step="0.01" name="salaire" class="form-control" required>
+                    </div>
+                    <div class="mb-2">
+                        <label>Prime / Bonus :</label>
+                        <input type="number" step="0.01" name="prime" value="0" class="form-control">
+                    </div>
+                    <div class="mb-2">
+                        <label>Date de paiement :</label>
+                        <input type="date" name="datePaie" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 mt-2">Valider le paiement & Émettre Fiche</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Historique des Fiches de Paie -->
+    <h3 class="mt-4">Historique des Salaires & Fiches de Paie</h3>
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Date de Paie</th>
+                <th>Salaire Base</th>
+                <th>Montant Total Versé</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="paie : ${historiquePaie}">
+                <td th:text="${paie.datePaie}"></td>
+                <td th:text="${paie.salaire}"></td>
+                <td th:text="${paie.montantTotal}"></td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(historiquePaie)}">
+                <td colspan="3" class="text-center">Aucune fiche de paie générée.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Section Absences -->
+    <div class="row mt-5">
+        <div class="col-md-5">
+            <div class="card p-3 shadow-sm">
+                <h4>Déclarer une Absence</h4>
+                <form th:action="@{/personnels/{id}/absence/save(id=${personnel.id})}" method="post">
+                    <div class="mb-2">
+                        <label>Date Début :</label>
+                        <input type="date" name="dateDebut" class="form-control" required>
+                    </div>
+                    <div class="mb-2">
+                        <label>Date Fin :</label>
+                        <input type="date" name="dateFin" class="form-control" required>
+                    </div>
+                    <div class="mb-2">
+                        <label>Motif / Raison :</label>
+                        <select name="idRaison" class="form-select" required>
+                            <option th:each="r : ${raisonsAbsence}" th:value="${r.id}" th:text="${r.libelle}"></option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label>Commentaire :</label>
+                        <textarea name="commentaire" class="form-control" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 mt-2">Enregistrer l'absence</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <h4>Historique des Absences</h4>
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Début</th>
+                        <th>Fin</th>
+                        <th>Motif</th>
+                        <th>Commentaire</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="abs : ${absencesList}">
+                        <td th:text="${abs.dateDebut}"></td>
+                        <td th:text="${abs.dateFin}"></td>
+                        <td th:text="${abs.raisonAbsence.libelle}"></td>
+                        <td th:text="${abs.commentaire}"></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(absencesList)}">
+                        <td colspan="4" class="text-center">Aucune absence enregistrée.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
 </body>
 </html>

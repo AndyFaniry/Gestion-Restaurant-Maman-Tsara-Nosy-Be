@@ -163,6 +163,7 @@ CREATE TABLE AbsencePersonnels(
     dateDebut Date NOT NULL,
     dateFin Date CHECK(dateFin IS NULL OR dateFin >= dateDebut),
     idRaisonAbsence INT NOT NULL,
+    commentaire VARCHAR(255),
     Foreign KEY (idPersonnels) REFERENCES Personnels(id),
     Foreign KEY (idRaisonAbsence) REFERENCES RaisonAbsence(id)
 );
