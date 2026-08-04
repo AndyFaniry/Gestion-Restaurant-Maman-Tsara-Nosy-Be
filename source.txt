@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : lun. 03 août 2026 01:18:22 EAT
+Date : mar. 04 août 2026 18:12:37 EAT
 
 
 ======================================
@@ -4744,6 +4744,49 @@ public class PersonnelsSpecification {
         };
     }
 }
+
+======================================
+FILE : .devcontainer/devcontainer.json
+======================================
+{
+    "name":"Spring boot & postgresql",
+    "dockerComposeFile": "docker-compose.yml",
+    "service":"app",
+    "workspaceFolder": "/workspace/${localWorkspaceFolderBasename}",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "vscjava.vscode-java-pack",
+                "vmware.vscode-spring-boot-dashboard"
+            ]
+        }
+    },
+    "forwardPorts": [8080,5432]
+
+}
+
+======================================
+FILE : .devcontainer/docker-compose.yml
+======================================
+version: '3.8'
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/java:17-bullseye
+    volumes:
+      - ..:/workspaces/${localWorkSpaceFolderSpacename}:cached
+    command: sleep infinity
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: dev1
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+
 
 ======================================
 FILE : database/add-column.sql
