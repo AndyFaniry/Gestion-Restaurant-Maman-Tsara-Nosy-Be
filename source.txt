@@ -1,5 +1,5 @@
 ===== EXPORT COMPLET SPRING =====
-Date : mar. 04 août 2026 18:12:37 EAT
+Date : mar. 04 août 2026 18:23:03 EAT
 
 
 ======================================
@@ -5571,13 +5571,15 @@ GROUP BY m.id, m.nom;
 ======================================
 RESOURCE : src/main/resources/application.properties
 ======================================
-spring.datasource.url=jdbc:postgresql://localhost:5432/restaurant
-spring.datasource.username=dev1
-spring.datasource.password=dev
+spring.application.name=restaurant
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/restaurant_db}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:dev1}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:dev}
 spring.datasource.driver-class-name=org.postgresql.Driver
-spring.jpa.hibernate.ddl-auto=update
+
+spring.jpa.hibernate.ddl-auto=${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
 
 ======================================
 RESOURCE : src/main/resources/static/css/style.css
