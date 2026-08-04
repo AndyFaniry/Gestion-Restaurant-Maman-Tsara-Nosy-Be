@@ -4,6 +4,7 @@ JAVA_DIR="src/main/java"
 RESOURCE_DIR="src/main/resources"
 DATEBASE_DIR="database"
 OUTPUT_FILE="source.txt"
+DEVCONTAINER_DIR=".devcontainer"
 
 > "$OUTPUT_FILE"
 
@@ -13,6 +14,17 @@ echo "" >> "$OUTPUT_FILE"
 
 # Tous les fichiers Java
 find "$JAVA_DIR" -type f -name "*.java" | sort | while read file
+do
+    echo "" >> "$OUTPUT_FILE"
+    echo "======================================" >> "$OUTPUT_FILE"
+    echo "FILE : $file" >> "$OUTPUT_FILE"
+    echo "======================================" >> "$OUTPUT_FILE"
+
+    cat "$file" >> "$OUTPUT_FILE"
+    echo "" >> "$OUTPUT_FILE"
+done
+
+find "$DEVCONTAINER_DIR" -type f -name "*.*" | sort | while read file
 do
     echo "" >> "$OUTPUT_FILE"
     echo "======================================" >> "$OUTPUT_FILE"

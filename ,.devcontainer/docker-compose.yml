@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/java:17-bullseye
+    volumes:
+      - ..:/workspaces/${localWorkSpaceFolderSpacename}:cached
+    command: sleep infinity
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: dev1
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
