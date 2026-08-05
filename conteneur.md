@@ -19,7 +19,7 @@ services:
     image: postgres:16.4
     container_name: postgres_db
     environment:
-      POSTGRES_DB: restaurant_db
+      POSTGRES_DB: restaurant
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
     ports:
@@ -35,7 +35,7 @@ services:
     depends_on:
       - db
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/restaurant_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/restaurant
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgrespassword
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
@@ -76,7 +76,7 @@ Assurez-vous que votre fichier `src/main/resources/application.properties` conti
 
 ```properties
 spring.application.name=restaurant
-spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/restaurant_db}
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/restaurant}
 spring.datasource.username=${SPRING_DATASOURCE_USERNAME:postgres}
 spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:postgrespassword}
 spring.datasource.driver-class-name=org.postgresql.Driver
@@ -120,7 +120,7 @@ docker-compose logs -f app
 * **Accéder au shell PostgreSQL (`psql 16.4`) dans le conteneur :**
 
 ```bash
-docker exec -it postgres_db psql -U postgres -d restaurant_db
+docker exec -it postgres_db psql -U postgres -d restaurant
 
 ```
 
