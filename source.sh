@@ -56,6 +56,8 @@ find "$RESOURCE_DIR" -type f \
     ! -name "*.ico" \
     ! -name "*.woff" \
     ! -name "*.woff2" \
+    ! -name "*.js" \
+    ! -name "*.css" \
     | sort | while read file
 do
     echo "" >> "$OUTPUT_FILE"
