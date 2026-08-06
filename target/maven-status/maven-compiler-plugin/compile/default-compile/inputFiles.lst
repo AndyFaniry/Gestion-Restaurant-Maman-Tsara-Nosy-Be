@@ -1,5 +1,7 @@
 /app/src/main/java/com/gestion/restaurant/RestaurantApplication.java
+/app/src/main/java/com/gestion/restaurant/config/AdminCredentials.java
 /app/src/main/java/com/gestion/restaurant/config/DatabaseUrlConfig.java
+/app/src/main/java/com/gestion/restaurant/config/ProdSecurityGuard.java
 /app/src/main/java/com/gestion/restaurant/config/SecurityConfig.java
 /app/src/main/java/com/gestion/restaurant/controller/auth/LoginController.java
 /app/src/main/java/com/gestion/restaurant/controller/caisse/CaisseController.java
