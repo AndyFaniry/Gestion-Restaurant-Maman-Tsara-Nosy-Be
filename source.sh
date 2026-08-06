@@ -54,6 +54,8 @@ find "$RESOURCE_DIR" -type f \
     ! -name "*.jpeg" \
     ! -name "*.gif" \
     ! -name "*.ico" \
+    ! -name "*.woff" \
+    ! -name "*.woff2" \
     | sort | while read file
 do
     echo "" >> "$OUTPUT_FILE"
