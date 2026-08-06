@@ -1,74 +1,126 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Menu & Plats du Restaurant</title>
-   <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css">
-</head>
-<body class="bg-light">
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:with="pageTitle='Catalogue des Plats'">
+<head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
+<body>
 
-<div class="container my-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Catalogue des Plats</h2>
-        <a th:href="@{/plats/recette/nouveau}" class="btn btn-success">+ Nouvelle Recette</a>
-    </div>
+<div class="app">
 
-    <!-- Barre de filtrage par Catégorie -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row align-items-center">
-                <label for="categoryFilter" class="col-md-3 col-form-label font-weight-bold">Filtrer par Catégorie :</label>
-                <div class="col-md-6">
-                    <select id="categoryFilter" class="form-select">
-                        <option value="ALL">-- Toutes les catégories --</option>
-                        <option th:each="cat : ${categories}" 
-                                th:value="${cat.id}" 
-                                th:text="${cat.libelle}">
-                        </option>
-                    </select>
-                </div>
-            </div>
+  <!-- Sidebar globale -->
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='plats')}"></aside>
+
+  <!-- Conteneur principal -->
+  <div class="main">
+
+    <!-- Topbar globale -->
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
+
+    <!-- Contenu de la page -->
+    <div class="content">
+
+      <!-- En-tête de la page -->
+      <div class="page-header">
+        <div>
+          <h2>Catalogue des Plats</h2>
+          <div class="breadcrumb">Accueil / <span>Catalogue</span></div>
         </div>
-    </div>
+        <a th:href="@{/plats/recette/nouveau}" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Nouvelle Recette
+        </a>
+      </div>
 
-    <!-- Grille des plats -->
-    <div class="row" id="platsGrid">
-        <div th:each="plat : ${plats}" class="col-md-4 mb-4 plat-card" th:data-category-id="${plat.categoriePlats.id}">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <span class="badge bg-secondary mb-2" th:text="${plat.categoriePlats.libelle}">Catégorie</span>
-                    <h5 class="card-title" th:text="${plat.nom}">Nom du Plat</h5>
-                    <p class="card-text text-muted" th:text="${plat.description}">Description...</p>
-                    <h6 class="text-primary font-weight-bold" th:text="${#numbers.formatCurrency(plat.prixVente)}">0.00 MGA</h6>
-                </div>
-                <div class="card-footer bg-white border-top-0 d-flex justify-content-between">
-                    <a th:href="@{'/plats/detail/' + ${plat.id}}" class="btn btn-sm btn-outline-primary">Voir Recette</a>
-                </div>
-            </div>
+      <!-- Formulaire / Filtre par Catégorie -->
+      <div class="form-card mb-4">
+        <div class="form-grid" style="grid-template-columns: 1fr 2fr;">
+          <div class="field-group">
+            <label for="categoryFilter" class="field-label">Filtrer par Catégorie</label>
+            <select id="categoryFilter" class="form-control">
+              <option value="ALL">-- Toutes les catégories --</option>
+              <option th:each="cat : ${categories}" 
+                      th:value="${cat.id}" 
+                      th:text="${cat.libelle}">
+              </option>
+            </select>
+          </div>
         </div>
+      </div>
+
+      <!-- Message si aucun plat ne correspond au filtre -->
+      <div id="noPlatsMessage" class="form-card text-center text-muted py-4 mb-4" style="display: none;">
+        Aucun plat disponible pour cette catégorie.
+      </div>
+
+      <!-- Grille des plats -->
+      <div class="row" id="platsGrid">
+        <div th:each="plat : ${plats}" 
+             class="col-md-4 mb-4 plat-card" 
+             th:data-category-id="${plat.categoriePlats != null ? plat.categoriePlats.id : ''}">
+          
+          <div class="form-card h-100 d-flex flex-column justify-content-between p-4">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge badge-info" 
+                      th:text="${plat.categoriePlats != null ? plat.categoriePlats.libelle : 'Non catégorisé'}">
+                  Catégorie
+                </span>
+                <span class="fw-bold text-primary" 
+                      th:text="${plat.prixVente != null ? #numbers.formatDecimal(plat.prixVente, 1, 'POINT', 2, 'COMMA') + ' Ar' : '0,00 Ar'}">
+                  0,00 Ar
+                </span>
+              </div>
+              
+              <h3 class="mt-2 mb-2" th:text="${plat.nom}">Nom du Plat</h3>
+              <p class="text-muted" th:text="${plat.description != null ? plat.description : 'Aucune description disponible.'}">
+                Description du plat...
+              </p>
+            </div>
+
+            <div class="pt-3 border-top mt-3 d-flex justify-content-end">
+              <a th:href="@{'/plats/detail/' + ${plat.id}}" class="btn btn-secondary btn-sm">
+                <i class="bi bi-journal-text"></i> Voir Recette
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </div>
+  </div>
+
 </div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
 
 <!-- Script de Filtrage Dynamique côté Client -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const categoryFilter = document.getElementById('categoryFilter');
     const cards = document.querySelectorAll('.plat-card');
+    const noPlatsMessage = document.getElementById('noPlatsMessage');
 
     categoryFilter.addEventListener('change', function() {
         const selectedCategoryId = this.value;
+        let visibleCount = 0;
 
         cards.forEach(card => {
             const cardCategoryId = card.getAttribute('data-category-id');
 
             if (selectedCategoryId === 'ALL' || cardCategoryId === selectedCategoryId) {
                 card.style.display = 'block';
+                visibleCount++;
             } else {
                 card.style.display = 'none';
             }
         });
+
+        if (noPlatsMessage) {
+            noPlatsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
     });
 });
 </script>
+
 </body>
 </html>
