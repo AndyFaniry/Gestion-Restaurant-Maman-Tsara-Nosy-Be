@@ -53,7 +53,7 @@ public class PersonnelsController {
         return "redirect:/personnels";
     }
 
-    @GetMapping("/{id}/detail")
+  @GetMapping({"/{id}/detail", "/detail/{id}"})
     public String detail(@PathVariable("id") Long id, Model model) {
         model.addAttribute("personnel", personnelsService.findById(id));
         model.addAttribute("historiquePaie", personnelsService.findHistoriquePaie(id));
