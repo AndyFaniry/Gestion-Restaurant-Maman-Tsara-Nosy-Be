@@ -1,5 +1,6 @@
 target/
 .env
+.env.prod
 .cursor/
 !.cursor/mcp.json.example
 .idea/

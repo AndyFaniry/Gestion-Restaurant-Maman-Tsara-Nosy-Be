@@ -18,6 +18,7 @@ Application web de gestion pour le restaurant **Maman Tsara** (Nosy Be) : stocks
 - [Structure du projet](#structure-du-projet)
 - [Modules fonctionnels](#modules-fonctionnels)
 - [Base de données](#base-de-données)
+- [Déploiement Render + Neon](#déploiement-render--neon)
 - [Tests](#tests)
 - [Scripts utiles](#scripts-utiles)
 - [Dépannage](#dépannage)
@@ -152,7 +153,7 @@ Toutes les pages métier sont protégées. Sans session → redirection vers `/l
 | `APP_ADMIN_PASSWORD` | `changeme` | Mot de passe (en mémoire, **pas** en base) |
 
 - Un seul compte `ROLE_ADMIN` (pas de table utilisateurs).
-- En production : définir un mot de passe fort dans `.env` (voir [.env.example](.env.example)).
+- En production (Render) : définir un mot de passe fort via le dashboard (voir [.env.prod.example](.env.prod.example)).
 - Déconnexion : bouton dans la sidebar (`POST /logout`).
 
 Public uniquement : `/login`, assets statiques (`/css`, `/js`, `/bootstrap`, `/font-awesome`, …), `/error/**`.
@@ -226,16 +227,22 @@ java -jar target/restaurant-0.0.1-SNAPSHOT.jar
 
 ## Configuration
 
-Fichier principal : `src/main/resources/application.properties`
+Configs séparées **local** / **prod** :
 
-| Propriété / variable | Défaut | Description |
-|----------------------|--------|-------------|
-| `DATABASE_URL` | `jdbc:postgresql://localhost:5432/restaurant?user=dev1&password=dev` | URL JDBC complète (user + password inclus) |
-| `SPRING_JPA_HIBERNATE_DDL_AUTO` | `update` | Schéma géré par Hibernate |
-| `APP_ADMIN_USERNAME` | `admin` | Login applicatif |
-| `APP_ADMIN_PASSWORD` | `changeme` | Mot de passe applicatif |
+| Environnement | Profil Spring | Base | Fichiers env |
+|---------------|---------------|------|--------------|
+| Local | `dev` | Postgres Docker (Compose) | [`.env.example`](.env.example) → `.env` |
+| Prod | `prod` | **Neon** | [`.env.prod.example`](.env.prod.example) → secrets Render |
 
-Plus de `SPRING_DATASOURCE_USERNAME` / `PASSWORD` : les identifiants sont dans `DATABASE_URL` (`?user=…&password=…`).
+| Variable | Local (exemple) | Prod |
+|----------|-----------------|------|
+| `SPRING_PROFILES_ACTIVE` | `dev` | `prod` |
+| `DATABASE_URL` | `jdbc:postgresql://...?user=&password=` | URI Neon `postgresql://...?sslmode=require` |
+| `PORT` | `8080` | Injecté par Render |
+| `APP_ADMIN_USERNAME` / `PASSWORD` | `.env` | Dashboard Render |
+| `HIKARI_MAX_POOL_SIZE` | défaut | `5` (Neon Free) |
+
+`DatabaseUrlConfig` convertit automatiquement les URL Neon (`postgres://` / `postgresql://`) en JDBC + SSL. Les URL `jdbc:` (Compose) restent inchangées.
 
 Exemple d’override en local :
 
@@ -245,14 +252,6 @@ $env:DATABASE_URL="jdbc:postgresql://localhost:5432/restaurant?user=dev1&passwor
 $env:APP_ADMIN_USERNAME="admin"
 $env:APP_ADMIN_PASSWORD="secret"
 .\mvnw.cmd spring-boot:run
-```
-
-```bash
-# Linux / macOS
-export DATABASE_URL="jdbc:postgresql://localhost:5432/restaurant?user=dev1&password=dev"
-export APP_ADMIN_USERNAME=admin
-export APP_ADMIN_PASSWORD=secret
-./mvnw spring-boot:run
 ```
 
 ---
@@ -378,6 +377,73 @@ Connexion manuelle au conteneur Postgres :
 ```bash
 docker exec -it mon_postgres_db psql -U dev1 -d restaurant
 ```
+
+---
+
+## Déploiement Render + Neon
+
+Architecture prod :
+
+| Couche | Service |
+|--------|---------|
+| Application | **Render** Web Service (Docker, [`Dockerfile`](Dockerfile), [`render.yaml`](render.yaml)) |
+| Base de données | **Neon** Postgres (externe, SSL) |
+
+Le Compose local (`db` + Adminer) **n’est pas** utilisé en production.
+
+### 1. Créer la base Neon
+
+1. Compte sur [console.neon.tech](https://console.neon.tech) → **New Project** (région EU si possible)
+2. Copier la **connection string** (avec `sslmode=require`)  
+   Ex. : `postgresql://user:pass@ep-xxxx.eu-central-1.aws.neon.tech/neondb?sslmode=require`
+3. Ne pas committer cette URL (voir [`.env.prod.example`](.env.prod.example))
+
+### 2. Pousser le code sur GitHub
+
+Branche déployée : `main` (ou celle configurée sur Render).
+
+### 3. Déployer sur Render
+
+**Via Blueprint (recommandé)**
+
+1. [dashboard.render.com](https://dashboard.render.com) → connecter le repo GitHub  
+2. **New → Blueprint** → sélectionner le dépôt (lit [`render.yaml`](render.yaml))  
+3. Saisir quand demandé :
+   - `DATABASE_URL` = URI Neon  
+   - `APP_ADMIN_PASSWORD` = mot de passe fort  
+4. Apply → build Docker (~5–10 min)
+
+**Manuel**
+
+1. **New → Web Service** → runtime **Docker** → repo  
+2. Health check path : `/login`  
+3. Variables d’environnement (même liste que [`.env.prod.example`](.env.prod.example)) :
+   - `SPRING_PROFILES_ACTIVE=prod`
+   - `DATABASE_URL=<uri Neon>`
+   - `APP_ADMIN_USERNAME=admin`
+   - `APP_ADMIN_PASSWORD=<fort>`
+   - `JAVA_OPTS=-Xms256m -Xmx512m`
+   - `HIKARI_MAX_POOL_SIZE=5`
+   - `SPRING_JPA_HIBERNATE_DDL_AUTO=update`
+
+### 4. Vérifier
+
+1. Logs Render : démarrage Spring, connexion Neon OK, pas d’erreur SSL  
+2. Ouvrir `https://<service>.onrender.com/login`  
+3. Se connecter avec `APP_ADMIN_*`  
+4. Hibernate `ddl-auto=update` crée les tables au premier boot  
+5. Plan Free Render : cold start après inactivité (~30–60 s)
+
+### 5. Local vs prod — rappel
+
+```bash
+# Local uniquement
+cp .env.example .env
+docker compose up -d --build
+# http://localhost:8080 — Adminer http://localhost:8081
+```
+
+Ne pas mettre l’URI Neon dans `.env` local au quotidien.
 
 ---
 

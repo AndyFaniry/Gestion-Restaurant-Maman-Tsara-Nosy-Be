@@ -7,11 +7,13 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      # Local uniquement — profil dev + Postgres Docker (pas Neon)
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       DATABASE_URL: "jdbc:postgresql://db:5432/restaurant?user=${POSTGRES_USER:-dev1}&password=${POSTGRES_PASSWORD:-dev}"
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-changeme}
+      PORT: "8080"
     depends_on:
       db:
         condition: service_healthy

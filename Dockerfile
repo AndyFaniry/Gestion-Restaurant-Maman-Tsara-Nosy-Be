@@ -17,5 +17,8 @@ COPY --from=build /app/target/restaurant-0.0.1-SNAPSHOT.jar app.jar
 RUN chown spring:spring app.jar
 USER spring:spring
 
+ENV PORT=8080
+ENV JAVA_OPTS="-Xms256m -Xmx512m"
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
