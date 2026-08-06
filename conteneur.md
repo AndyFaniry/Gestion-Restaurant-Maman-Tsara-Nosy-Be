@@ -1,4 +1,3 @@
-
 Voici un guide pas-à-pas pour configurer, exécuter et tester votre application **Spring Boot (Java 21 + PostgreSQL + Maven 3.8)** dans un conteneur au sein de **GitHub Codespaces** directement depuis votre iPad (via navigateur ou VS Code Web).
 
 ---
@@ -42,7 +41,6 @@ services:
 
 volumes:
   postgres_data:
-
 ```
 
 ---
@@ -65,7 +63,6 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
 ```
 
 ---
@@ -84,7 +81,6 @@ spring.datasource.driver-class-name=org.postgresql.Driver
 spring.jpa.hibernate.ddl-auto=${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.show-sql=true
-
 ```
 
 ---
@@ -96,14 +92,12 @@ spring.jpa.show-sql=true
 
 ```bash
 docker-compose up --build -d
-
 ```
 
 3. **Vérifier le statut des conteneurs** :
 
 ```bash
 docker-compose ps
-
 ```
 
 ---
@@ -114,14 +108,12 @@ docker-compose ps
 
 ```bash
 docker-compose logs -f app
-
 ```
 
 * **Accéder au shell PostgreSQL (`psql 16.4`) dans le conteneur :**
 
 ```bash
 docker exec -it postgres_db psql -U postgres -d restaurant
-
 ```
 
 ---
