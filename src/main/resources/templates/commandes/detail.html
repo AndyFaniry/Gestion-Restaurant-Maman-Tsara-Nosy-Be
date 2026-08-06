@@ -1,45 +1,121 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Détails de la Commande</title>
-    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css">
-</head>
-<body class="container mt-4">
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:with="pageTitle='Détails de la Commande'">
+<head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
+<body>
 
-    <h2>Détails de la Commande #<span th:text="${commande.id}"></span></h2>
-    
-    <div class="card mb-4">
-        <div class="card-body">
-            <p><strong>Client :</strong> <span th:text="${commande.client.nom + ' ' + commande.client.prenom}"></span></p>
-            <p><strong>Date :</strong> <span th:text="${commande.dateCommande}"></span></p>
-            <p><strong>Zone de Livraison :</strong> <span th:text="${commande.zoneLivraison.libelle}"></span> (<span th:text="${commande.zoneLivraison.prix}"></span> Ariary)</p>
-            <p><strong>Montant Total :</strong> <span class="badge bg-success fs-6" th:text="${commande.montantTotal + ' Ariary'}"></span></p>
+<div class="app">
+
+  <!-- Sidebar globale avec l'onglet 'commandes' actif -->
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='commandes')}"></aside>
+
+  <!-- Conteneur principal -->
+  <div class="main">
+
+    <!-- Topbar globale -->
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
+
+    <!-- Contenu de la page -->
+    <div class="content">
+
+      <!-- En-tête de la page -->
+      <div class="page-header">
+        <div>
+          <h2>Détails de la Commande #<span th:text="${commande != null ? commande.id : ''}">1</span></h2>
+          <div class="breadcrumb">
+            Accueil / <a th:href="@{/commandes}">Commandes</a> / <span>Détails</span>
+          </div>
         </div>
-    </div>
+        <div class="d-flex gap-2">
+          <a th:href="@{/commandes}" class="btn btn-secondary">&larr; Retour</a>
+          <a th:if="${commande != null}" th:href="@{/commandes/edit/{id}(id=${commande.id})}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Modifier
+          </a>
+        </div>
+      </div>
 
-    <h4>Liste des Plats</h4>
-    <table class="table table-striped">
-        <thead>
+      <!-- Résumé des informations de la commande -->
+      <div class="form-card mb-4" th:if="${commande != null}">
+        <h3 class="text-primary mb-3">Informations Générales</h3>
+        
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+          
+          <div class="field-group">
+            <label class="field-label">Client</label>
+            <div class="fw-bold" th:text="${commande.client != null ? (commande.client.nom + ' ' + (commande.client.prenom != null ? commande.client.prenom : '')) : '-'}">
+              Nom Prénom
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Date de Commande</label>
+            <div th:text="${commande.dateCommande != null ? #temporals.format(commande.dateCommande, 'dd/MM/yyyy HH:mm') : '-'}">
+              01/01/2026 12:00
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Zone de Livraison</label>
+            <div>
+              <span th:text="${commande.zoneLivraison != null ? commande.zoneLivraison.libelle : '-'}">Zone</span>
+              <small class="text-muted" th:if="${commande.zoneLivraison != null && commande.zoneLivraison.prix != null}"
+                     th:text="${'(' + #numbers.formatDecimal(commande.zoneLivraison.prix, 1, 'POINT', 2, 'COMMA') + ' Ar)'}">
+                (0,00 Ar)
+              </small>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Montant Total</label>
+            <div>
+              <span class="badge badge-info fs-6" 
+                    th:text="${commande.montantTotal != null ? #numbers.formatDecimal(commande.montantTotal, 1, 'POINT', 2, 'COMMA') + ' Ar' : '0,00 Ar'}">
+                0,00 Ar
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Tableau de la liste des plats -->
+      <div class="table-card mb-4">
+        <div class="p-3 border-bottom bg-light">
+          <h3 class="m-0 text-secondary" style="font-size: 1.1rem;">
+            <i class="bi bi-journal-text"></i> Liste des Plats Commandés
+          </h3>
+        </div>
+
+        <table class="data-table">
+          <thead>
             <tr>
-                <th>Plat</th>
-                <th>Prix Unitaire</th>
-                <th>Quantité</th>
-                <th>Montant</th>
+              <th>Plat</th>
+              <th class="text-end">Prix Unitaire</th>
+              <th class="text-center">Quantité</th>
+              <th class="text-end">Montant Total</th>
             </tr>
-        </thead>
-        <tbody>
+          </thead>
+          <tbody>
             <tr th:each="d : ${details}">
-                <td th:text="${d.plat.nom}"></td>
-                <td th:text="${d.prixUnitaire + ' Ariary'}"></td>
-                <td th:text="${d.quantite}"></td>
-                <td th:text="${d.montant + ' Ariary'}"></td>
+              <td class="fw-bold" th:text="${d.plat != null ? d.plat.nom : '-'}">Nom du plat</td>
+              <td class="text-end" th:text="${d.prixUnitaire != null ? #numbers.formatDecimal(d.prixUnitaire, 1, 'POINT', 2, 'COMMA') + ' Ar' : '0,00 Ar'}">0,00 Ar</td>
+              <td class="text-center" th:text="${d.quantite != null ? d.quantite : 0}">1</td>
+              <td class="text-end fw-bold" th:text="${d.montant != null ? #numbers.formatDecimal(d.montant, 1, 'POINT', 2, 'COMMA') + ' Ar' : '0,00 Ar'}">0,00 Ar</td>
             </tr>
-        </tbody>
-    </table>
+            <tr th:if="${#lists.isEmpty(details)}">
+              <td colspan="4" class="text-center text-muted py-4">Aucun plat associé à cette commande.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-    <a th:href="@{/commandes/edit/{id}(id=${commande.id})}" class="btn btn-warning">Modifier</a>
-    <a th:href="@{/commandes}" class="btn btn-secondary">Retour</a>
+    </div>
+  </div>
+
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
 
 </body>
 </html>

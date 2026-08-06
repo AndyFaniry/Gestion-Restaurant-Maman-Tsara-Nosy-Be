@@ -1,74 +1,91 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulaire Client - Maman Tsara Nosy-Be</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:with="pageTitle=${client.id == null ? 'Ajouter un Client — Maman Tsara' : 'Modifier le Client — Maman Tsara'}">
+<head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
 <body>
 
 <div class="app">
 
-    <!-- Sidebar globale avec l'onglet 'clients' actif -->
-    <aside th:replace="~{fragments/layout :: sidebar('clients')}"></aside>
+  <!-- Sidebar globale avec l'onglet 'clients' actif -->
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='clients')}"></aside>
 
-    <div class="main">
-        <!-- Topbar globale avec titre dynamique -->
-        <div th:replace="~{fragments/layout :: topbar(${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'})}"></div>
+  <!-- Conteneur principal -->
+  <div class="main">
 
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h2 th:text="${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'}">Client</h2>
-                    <div class="breadcrumb">Accueil / Clients / <span th:text="${client.id == null ? 'Nouveau' : 'Édition'}">Formulaire</span></div>
-                </div>
-                <a th:href="@{/clients}" class="btn btn-secondary btn-sm">Retour à la liste</a>
-            </div>
+    <!-- Topbar globale -->
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
 
-            <div class="card">
-                <section class="form-container">
-                    <form th:action="@{/clients/save}" th:object="${client}" method="post" class="custom-form">
-                        <input type="hidden" th:field="*{id}" />
+    <!-- Contenu de la page -->
+    <div class="content">
 
-                        <div class="form-group">
-                            <label for="nom">Nom :</label>
-                            <input type="text" id="nom" th:field="*{nom}" required class="form-control" placeholder="Entrez le nom" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="prenom">Prénom :</label>
-                            <input type="text" id="prenom" th:field="*{prenom}" required class="form-control" placeholder="Entrez le prénom" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="contact">Contact :</label>
-                            <input type="text" id="contact" th:field="*{contact}" required class="form-control" placeholder="Téléphone ou email" />
-                        </div>
-
-                        <div class="form-group">
-                            <label for="typeClient">Type de Client :</label>
-                            <!-- Correction ici : binding sur idTypeClient -->
-                            <select id="typeClient" th:field="*{idTypeClient}" required class="form-control">
-                                <option value="">-- Sélectionner un type --</option>
-                                <option th:each="type : ${typesClient}" 
-                                        th:value="${type.id}" 
-                                        th:text="${type.libelle}">Type</option>
-                            </select>
-                        </div>
-
-                        <div class="form-actions" style="margin-top: 20px;">
-                            <button type="submit" class="btn btn-primary">Enregistrer</button>
-                            <a th:href="@{/clients}" class="btn btn-secondary">Annuler</a>
-                        </div>
-                    </form>
-                </section>
-            </div>
+      <!-- En-tête de la page -->
+      <div class="page-header">
+        <div>
+          <h2 th:text="${client.id == null ? 'Ajouter un Client' : 'Modifier le Client'}">Client</h2>
+          <div class="breadcrumb">
+            Accueil / <a th:href="@{/clients}">Clients</a> / 
+            <span th:text="${client.id == null ? 'Nouveau' : 'Édition'}">Formulaire</span>
+          </div>
         </div>
+        <a th:href="@{/clients}" class="btn btn-secondary">&larr; Retour à la liste</a>
+      </div>
+
+      <!-- Formulaire de saisie -->
+      <form th:action="@{/clients/save}" th:object="${client}" method="post" id="clientForm">
+        <input type="hidden" th:field="*{id}" />
+
+        <div class="form-card mb-4">
+          <h3 class="text-primary mb-3">Informations du Client</h3>
+
+          <div class="form-grid">
+            
+            <div class="field-group">
+              <label for="nom" class="field-label">Nom <span class="required">*</span></label>
+              <input type="text" id="nom" th:field="*{nom}" required class="form-control" placeholder="Entrez le nom" />
+            </div>
+
+            <div class="field-group">
+              <label for="prenom" class="field-label">Prénom</label>
+              <input type="text" id="prenom" th:field="*{prenom}" class="form-control" placeholder="Entrez le prénom" />
+            </div>
+
+            <div class="field-group">
+              <label for="contact" class="field-label">Contact <span class="required">*</span></label>
+              <input type="text" id="contact" th:field="*{contact}" required class="form-control" placeholder="Téléphone ou email" />
+            </div>
+
+            <div class="field-group">
+              <label for="typeClient" class="field-label">Type de Client <span class="required">*</span></label>
+              <select id="typeClient" th:field="*{idTypeClient}" required class="form-control">
+                <option value="">-- Sélectionner un type --</option>
+                <option th:each="type : ${typesClient}" 
+                        th:value="${type.id}" 
+                        th:text="${type.libelle}">
+                  Type
+                </option>
+              </select>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Barre d'actions -->
+        <div class="toolbar d-flex justify-content-end gap-2 mb-4">
+          <a th:href="@{/clients}" class="btn btn-secondary">Annuler</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> Enregistrer
+          </button>
+        </div>
+
+      </form>
+
     </div>
+  </div>
 
 </div>
 
-<script th:src="@{/js/script.js}"></script>
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
+
 </body>
 </html>
