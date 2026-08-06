@@ -1,64 +1,112 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Formulaire Ingrédient</title>
-    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css">
-</head>
-<body class="bg-light">
-<div class="container mt-4" style="max-width: 600px;">
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h1 th:text="${ingredient.id == null} ? 'Ajouter un Ingrédient' : |Modifier l'Ingrédient|">Titre</h1>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:with="pageTitle=${ingredient.id == null ? 'Nouveau Matériel' : 'Modifier Ingrédient'}">
+<head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
+<body>
+
+<div class="app">
+
+  <!-- Sidebar globale -->
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='ingredients')}"></aside>
+
+  <!-- Conteneur principal -->
+  <div class="main">
+
+    <!-- Topbar globale -->
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
+
+    <!-- Contenu de la page -->
+    <div class="content">
+
+      <div class="page-header">
+        <div>
+          <h2 th:text="${ingredient.id == null ? 'Ajouter un Ingrédient' : 'Modifier l''Ingrédient'}"></h2>
+          <div class="breadcrumb">Accueil / <a th:href="@{/ingredients}">Ingrédients</a> / <span>Formulaire</span></div>
         </div>
-        <div class="card-body">
-            <form th:action="@{/ingredients/save}" method="post" th:object="${ingredient}">
-                <input type="hidden" th:field="*{id}" />
+      </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Nom de l'ingrédient</label>
-                    <input type="text" th:field="*{nom}" class="form-control" required placeholder="Ex: Farine, Huile...">
-                </div>
+      <div class="form-card">
+        <form th:action="@{/ingredients/save}" th:object="${ingredient}" method="post">
+          <input type="hidden" th:field="*{id}" />
 
-                <div class="mb-3">
-                    <label class="form-label">Catégorie</label>
-                    <select th:field="*{idCategorie}" class="form-select" required>
-                        <option value="">-- Sélectionner une catégorie --</option>
-                        <option th:each="cat : ${categories}" th:value="${cat.id}" th:text="${cat.libelle}"></option>
-                    </select>
-                </div>
+          <!-- Champ Nom en pleine largeur -->
+          <div class="form-grid mb-3">
+            <div class="field-group" style="grid-column: 1 / -1;">
+              <label class="field-label">Nom de l'ingrédient <span class="required">*</span></label>
+              <input type="text" th:field="*{nom}" class="form-control" placeholder="Ex: Farine, Huile..." required />
+            </div>
+          </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Statut</label>
-                    <select th:field="*{idStatut}" class="form-select" required>
-                        <option value="">-- Sélectionner un statut --</option>
-                        <option th:each="st : ${statuts}" th:value="${st.id}" th:text="${st.libelle}"></option>
-                    </select>
-                </div>
+          <!-- Ligne 1 : Catégorie & Statut -->
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label">Catégorie <span class="required">*</span></label>
+              <select th:field="*{idCategorie}" class="form-control" required>
+                <option value="">-- Sélectionner une catégorie --</option>
+                <option th:each="cat : ${categories}" 
+                        th:value="${cat.id}" 
+                        th:text="${cat.libelle}"
+                        th:selected="${ingredient.idCategorie != null and ingredient.idCategorie == cat.id}">
+                </option>
+              </select>
+            </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Fournisseur</label>
-                    <select th:field="*{idFournisseur}" class="form-select" required>
-                        <option value="">-- Sélectionner un fournisseur --</option>
-                        <option th:each="f : ${fournisseurs}" th:value="${f.id}" th:text="${f.nom + ' ' + f.prenom}"></option>
-                    </select>
-                </div>
+            <div class="field-group">
+              <label class="field-label">Statut <span class="required">*</span></label>
+              <select th:field="*{idStatut}" class="form-control" required>
+                <option value="">-- Sélectionner un statut --</option>
+                <option th:each="st : ${statuts}" 
+                        th:value="${st.id}" 
+                        th:text="${st.libelle}"
+                        th:selected="${ingredient.idStatut != null and ingredient.idStatut == st.id}">
+                </option>
+              </select>
+            </div>
+          </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Unité de mesure</label>
-                    <select th:field="*{idUnite}" class="form-select" required>
-                        <option value="">-- Sélectionner une unité --</option>
-                        <option th:each="u : ${unites}" th:value="${u.id}" th:text="${u.nom + ' (' + u.symbole + ')'}"></option>
-                    </select>
-                </div>
+          <!-- Ligne 2 : Fournisseur & Unité -->
+          <div class="form-grid">
+            <div class="field-group">
+              <label class="field-label">Fournisseur <span class="required">*</span></label>
+              <select th:field="*{idFournisseur}" class="form-control" required>
+                <option value="">-- Sélectionner un fournisseur --</option>
+                <option th:each="f : ${fournisseurs}" 
+                        th:value="${f.id}" 
+                        th:text="${f.nom + ' ' + f.prenom}"
+                        th:selected="${ingredient.idFournisseur != null and ingredient.idFournisseur == f.id}">
+                </option>
+              </select>
+            </div>
 
-                <div class="d-flex justify-content-between mt-4">
-                    <a th:href="@{/ingredients}" class="btn btn-secondary">Annuler</a>
-                    <button type="submit" class="btn btn-success">Enregistrer</button>
-                </div>
-            </form>
-        </div>
+            <div class="field-group">
+              <label class="field-label">Unité de mesure <span class="required">*</span></label>
+              <select th:field="*{idUnite}" class="form-control" required>
+                <option value="">-- Sélectionner une unité --</option>
+                <option th:each="u : ${unites}" 
+                        th:value="${u.id}" 
+                        th:text="${u.nom + ' (' + u.symbole + ')'}"
+                        th:selected="${ingredient.idUnite != null and ingredient.idUnite == u.id}">
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="toolbar">
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+            <a th:href="@{/ingredients}" class="btn btn-secondary">Annuler</a>
+          </div>
+
+        </form>
+      </div>
+
     </div>
+  </div>
+
 </div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
+
 </body>
 </html>
