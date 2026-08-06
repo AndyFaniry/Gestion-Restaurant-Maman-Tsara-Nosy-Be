@@ -36,16 +36,26 @@
           <div class="form-grid">
             <div class="field-group">
               <label class="field-label">Catégorie <span class="required">*</span></label>
-              <select th:field="*{categorieMaterielles}" required>
+              <!-- CORRECTION ICI : th:field="*{idCategorie}" -->
+              <select th:field="*{idCategorie}" required>
                 <option value="">-- Sélectionner --</option>
-                <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.libelle}"></option>
+                <option th:each="c : ${categories}" 
+                        th:value="${c.id}" 
+                        th:text="${c.libelle}"
+                        th:selected="${materiel.idCategorie != null and materiel.idCategorie == c.id}">
+                </option>
               </select>
             </div>
             <div class="field-group">
               <label class="field-label">Statut <span class="required">*</span></label>
-              <select th:field="*{statutMaterielles}" required>
+              <!-- CORRECTION ICI : th:field="*{idStatut}" -->
+              <select th:field="*{idStatut}" required>
                 <option value="">-- Sélectionner --</option>
-                <option th:each="s : ${statuts}" th:value="${s.id}" th:text="${s.libelle}"></option>
+                <option th:each="s : ${statuts}" 
+                        th:value="${s.id}" 
+                        th:text="${s.libelle}"
+                        th:selected="${materiel.idStatut != null and materiel.idStatut == s.id}">
+                </option>
               </select>
             </div>
           </div>
