@@ -1,7 +1,7 @@
 + [X] initialiser base de données
 + [X] creera database.sql
-+ [ ] logique metier tout dans Service meme Page et Views et Controller appel Service structure MVC tu commprends
-+ [ ] donnée dans la base de donnée plus statique
++ [X] logique metier tout dans Service meme Page et Views et Controller appel Service structure MVC tu commprends
++ [X] donnée dans la base de donnée plus statique
 + [ ] utiliser graphe
 
 | module        | fonction                                                                                                                                                     | priorite      | description                       | etat    | duree estimer | temps ecouler |
