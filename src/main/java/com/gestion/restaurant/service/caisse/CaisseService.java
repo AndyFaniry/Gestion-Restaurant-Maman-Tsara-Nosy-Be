@@ -35,12 +35,12 @@ public class CaisseService {
 
     @Transactional(readOnly = true)
     public List<MouvementCaisse> findAll() {
-        return mouvementCaisseRepository.findAll();
+        return mouvementCaisseRepository.findAllWithType();
     }
 
     @Transactional(readOnly = true)
     public MouvementCaisse findById(Long id) {
-        return mouvementCaisseRepository.findById(id)
+        return mouvementCaisseRepository.findByIdWithType(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Mouvement de caisse introuvable : " + id));
     }
 

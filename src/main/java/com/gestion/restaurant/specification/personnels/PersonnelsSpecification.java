@@ -2,6 +2,7 @@ package com.gestion.restaurant.specification.personnels;
 
 import com.gestion.restaurant.dto.personnels.PersonnelSearchCriteria;
 import com.gestion.restaurant.entity.personnels.Personnels;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -12,6 +13,11 @@ public class PersonnelsSpecification {
 
     public static Specification<Personnels> withFilters(PersonnelSearchCriteria criteria) {
         return (root, query, cb) -> {
+            if (query.getResultType() != null && Personnels.class.equals(query.getResultType())) {
+                root.fetch("rolePersonnels", JoinType.LEFT);
+                query.distinct(true);
+            }
+
             List<Predicate> predicates = new ArrayList<>();
 
             if (criteria.getNom() != null && !criteria.getNom().isBlank()) {

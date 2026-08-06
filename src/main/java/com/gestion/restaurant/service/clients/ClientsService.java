@@ -36,7 +36,7 @@ public class ClientsService {
 
     @Transactional(readOnly = true)
     public Clients findById(Long id) {
-        return clientsRepository.findById(id)
+        return clientsRepository.findByIdWithType(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client introuvable avec l'ID : " + id));
     }
 

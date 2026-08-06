@@ -64,18 +64,18 @@ public class CommandesService {
 
     @Transactional(readOnly = true)
     public List<Commandes> findAll() {
-        return commandesRepository.findAll();
+        return commandesRepository.findAllWithRelations();
     }
 
     @Transactional(readOnly = true)
     public Commandes findById(Long id) {
-        return commandesRepository.findById(id)
+        return commandesRepository.findByIdWithRelations(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Commande introuvable avec l'ID : " + id));
     }
 
     @Transactional(readOnly = true)
     public List<DetailsCommandes> findDetailsByCommandeId(Long commandeId) {
-        return detailsCommandesRepository.findByCommandeId(commandeId);
+        return detailsCommandesRepository.findByCommandeIdWithPlat(commandeId);
     }
 
     @Transactional(readOnly = true)
@@ -210,7 +210,7 @@ public class CommandesService {
     public void deleteById(Long id) {
         Commandes commande = findById(id);
         LocalDate dateMvt = commande.getDateCommande() != null ? commande.getDateCommande() : LocalDate.now();
-        List<DetailsCommandes> details = detailsCommandesRepository.findByCommandeId(id);
+        List<DetailsCommandes> details = detailsCommandesRepository.findByCommandeIdWithPlat(id);
 
         for (DetailsCommandes detail : details) {
             Plats plat = detail.getPlat();

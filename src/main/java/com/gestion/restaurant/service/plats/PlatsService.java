@@ -37,8 +37,14 @@ public class PlatsService {
         this.ingredientsRepository = ingredientsRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<Plats> search(PlatSearchCriteria criteria) {
         Specification<Plats> spec = (root, query, cb) -> {
+            // Join catégorie pour éviter N+1 / Lazy si fetch devient LAZY
+            if (query.getResultType() != null && Plats.class.equals(query.getResultType())) {
+                root.fetch("categoriePlats", jakarta.persistence.criteria.JoinType.LEFT);
+                query.distinct(true);
+            }
             List<Predicate> predicates = new ArrayList<>();
             if (criteria.getNom() != null && !criteria.getNom().trim().isEmpty()) {
                 predicates.add(cb.like(cb.lower(root.get("nom")), "%" + criteria.getNom().toLowerCase() + "%"));
@@ -51,11 +57,13 @@ public class PlatsService {
         return platsRepository.findAll(spec);
     }
 
+    @Transactional(readOnly = true)
     public Plats findById(Long id) {
-        return platsRepository.findById(id)
+        return platsRepository.findByIdWithCategorie(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plat non trouvé avec l'ID: " + id));
     }
 
+    @Transactional(readOnly = true)
     public List<CategoriePlats> findAllCategories() {
         return categoriePlatsRepository.findAll();
     }

@@ -72,7 +72,7 @@ public class MateriellesService {
 
     @Transactional(readOnly = true)
     public Materielles findById(Long id) {
-        return materiellesRepository.findById(id)
+        return materiellesRepository.findByIdWithRelations(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Matériel introuvable avec l'ID : " + id));
     }
 
@@ -88,6 +88,7 @@ public class MateriellesService {
         return dto;
     }
 
+    @Transactional(readOnly = true)
     public MaterielResponseDto findDtoById(Long id) {
         return MaterielMapper.toDto(findById(id));
     }

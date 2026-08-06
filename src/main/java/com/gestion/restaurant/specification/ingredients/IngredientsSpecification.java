@@ -2,6 +2,7 @@ package com.gestion.restaurant.specification.ingredients;
 
 import com.gestion.restaurant.dto.ingredients.IngredientSearchCriteria;
 import com.gestion.restaurant.entity.ingredients.Ingredients;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -12,6 +13,15 @@ public class IngredientsSpecification {
 
     public static Specification<Ingredients> withFilters(IngredientSearchCriteria criteria) {
         return (root, query, cb) -> {
+            // Évite N+1 / LazyInitializationException si les associations passent en LAZY
+            if (query.getResultType() != null && Ingredients.class.equals(query.getResultType())) {
+                root.fetch("categorieIngredients", JoinType.LEFT);
+                root.fetch("statutIngredient", JoinType.LEFT);
+                root.fetch("fournisseur", JoinType.LEFT);
+                root.fetch("unite", JoinType.LEFT);
+                query.distinct(true);
+            }
+
             List<Predicate> predicates = new ArrayList<>();
 
             if (criteria == null) {

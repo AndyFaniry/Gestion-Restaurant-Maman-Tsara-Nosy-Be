@@ -1,8 +1,8 @@
 package com.gestion.restaurant.specification.materielles;
 
-
 import com.gestion.restaurant.dto.materielles.MaterielSearchCriteria;
 import com.gestion.restaurant.entity.materielles.Materielles;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -13,6 +13,12 @@ public class MateriellesSpecification {
 
     public static Specification<Materielles> withFilters(MaterielSearchCriteria criteria) {
         return (root, query, cb) -> {
+            if (query.getResultType() != null && Materielles.class.equals(query.getResultType())) {
+                root.fetch("categorieMaterielles", JoinType.LEFT);
+                root.fetch("statutMaterielles", JoinType.LEFT);
+                query.distinct(true);
+            }
+
             List<Predicate> predicates = new ArrayList<>();
 
             if (criteria == null) {

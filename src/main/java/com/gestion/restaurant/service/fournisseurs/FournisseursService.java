@@ -26,12 +26,12 @@ public class FournisseursService {
 
     @Transactional(readOnly = true)
     public List<Fournisseurs> findAll() {
-        return fournisseursRepository.findAll();
+        return fournisseursRepository.findAllWithType();
     }
 
     @Transactional(readOnly = true)
     public Fournisseurs findById(Long id) {
-        return fournisseursRepository.findById(id)
+        return fournisseursRepository.findByIdWithType(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Fournisseur introuvable : " + id));
     }
 

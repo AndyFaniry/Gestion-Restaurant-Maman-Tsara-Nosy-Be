@@ -72,7 +72,7 @@ public class IngredientsService {
 
     @Transactional(readOnly = true)
     public Ingredients findById(Long id) {
-        return ingredientsRepository.findById(id)
+        return ingredientsRepository.findByIdWithRelations(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ingrédient introuvable avec l'ID : " + id));
     }
 
@@ -277,11 +277,14 @@ public class IngredientsService {
 
     @Transactional(readOnly = true)
     public List<IngredientStockDTO> getGlobalStockState() {
-        return ingredientsRepository.findAll().stream()
-                .map(ing -> {
-                    BigDecimal quantite = getStockActuel(ing.getId());
-                    return new IngredientStockDTO(ing, quantite.doubleValue());
-                })
+        var stocks = etatStockRepo.findLatestQuantiteByIngredient().stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row[0]).longValue(),
+                        row -> ((Number) row[1]).doubleValue(),
+                        (a, b) -> a
+                ));
+        return ingredientsRepository.findAllWithRelations().stream()
+                .map(ing -> new IngredientStockDTO(ing, stocks.getOrDefault(ing.getId(), 0.0)))
                 .collect(Collectors.toList());
     }
 
@@ -302,6 +305,6 @@ public class IngredientsService {
 
     @Transactional(readOnly = true)
     public List<Ingredients> findAll() {
-        return ingredientsRepository.findAll();
+        return ingredientsRepository.findAllWithRelations();
     }
 }

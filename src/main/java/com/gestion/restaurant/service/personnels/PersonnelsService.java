@@ -50,7 +50,7 @@ public class PersonnelsService {
 
     @Transactional(readOnly = true)
     public Personnels findById(Long id) {
-        return personnelsRepository.findById(id)
+        return personnelsRepository.findByIdWithRole(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé introuvable avec l'ID : " + id));
     }
 
