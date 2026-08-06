@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface FacturesCommandesRepository extends JpaRepository<FacturesCommandes, Long> {
+
+    void deleteByCommande_Id(Long commandeId);
 }

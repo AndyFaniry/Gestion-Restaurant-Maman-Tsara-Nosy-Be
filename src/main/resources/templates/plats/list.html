@@ -29,6 +29,8 @@
         </a>
       </div>
 
+      <div th:replace="~{fragments/alerts :: flash}"></div>
+
       <!-- Formulaire de filtrage -->
       <div class="form-card mb-4">
         <form th:action="@{/plats}" method="get" th:object="${criteria}">
@@ -85,10 +87,12 @@
                 <a th:href="@{/recettes/plat/{id}(id=${plat.id})}" class="btn btn-warning" title="Voir Recette">
                   <i class="bi bi-journal-text"></i> Recette
                 </a>
-                <a th:href="@{/plats/delete/{id}(id=${plat.id})}" class="btn btn-danger" 
-                   onclick="return confirm('Supprimer ce plat ?');" title="Supprimer">
-                  <i class="bi bi-trash"></i> Supprimer
-                </a>
+                <form th:action="@{/plats/delete/{id}(id=${plat.id})}" method="post" class="d-inline"
+                      onsubmit="return confirm('Supprimer ce plat ?');">
+                  <button type="submit" class="btn btn-danger" title="Supprimer">
+                    <i class="bi bi-trash"></i> Supprimer
+                  </button>
+                </form>
               </td>
             </tr>
             <tr th:if="${#lists.isEmpty(platsList)}">

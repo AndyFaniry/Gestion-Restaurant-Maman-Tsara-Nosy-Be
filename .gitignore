@@ -1,0 +1,14 @@
+target/
+.env
+.cursor/
+!.cursor/mcp.json.example
+.idea/
+*.iml
+.vscode/
+*.class
+*.jar
+!mvnw
+!mvnw.cmd
+.DS_Store
+Thumbs.db
+source.txt

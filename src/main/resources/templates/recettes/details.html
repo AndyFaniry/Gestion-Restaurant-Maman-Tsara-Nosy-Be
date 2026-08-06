@@ -30,8 +30,8 @@
       </div>
 
       <!-- Notification de succès -->
-      <div th:if="${success}" class="alert alert-success mb-4 d-flex justify-content-between align-items-center">
-        <span th:text="${success}">Option enregistrée avec succès.</span>
+      <div th:if="${successMessage}" class="alert alert-success mb-4 d-flex justify-content-between align-items-center">
+        <span th:text="${successMessage}">Option enregistrée avec succès.</span>
         <button type="button" class="btn-close" onclick="this.parentElement.remove();">&times;</button>
       </div>
 

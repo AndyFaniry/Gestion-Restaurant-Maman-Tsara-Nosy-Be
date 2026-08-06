@@ -29,6 +29,8 @@
         </a>
       </div>
 
+      <div th:replace="~{fragments/alerts :: flash}"></div>
+
       <!-- Tableau des résultats -->
       <div class="table-card mb-4">
         <table class="data-table">
@@ -66,13 +68,12 @@
                 <a th:href="@{/commandes/detail/{id}(id=${c.id})}" class="btn btn-secondary btn-sm" title="Voir détails">
                   <i class="bi bi-journal-text"></i>
                 </a>
-                <a th:href="@{/commandes/edit/{id}(id=${c.id})}" class="btn btn-warning btn-sm" title="Modifier">
-                  <i class="bi bi-pencil"></i> Modifier
-                </a>
-                <a th:href="@{/commandes/delete/{id}(id=${c.id})}" class="btn btn-danger btn-sm" 
-                   onclick="return confirm('Annuler cette commande ?');" title="Supprimer">
-                  <i class="bi bi-trash"></i> Supprimer
-                </a>
+                <form th:action="@{/commandes/delete/{id}(id=${c.id})}" method="post" class="d-inline"
+                      onsubmit="return confirm('Annuler cette commande ? Le stock sera réintégré.');">
+                  <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">
+                    <i class="bi bi-trash"></i> Supprimer
+                  </button>
+                </form>
               </td>
             </tr>
             <tr th:if="${#lists.isEmpty(commandesList)}">

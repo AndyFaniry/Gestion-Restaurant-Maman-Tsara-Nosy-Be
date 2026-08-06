@@ -42,7 +42,7 @@ public class RecetteController {
     public String ajouterIngredient(@ModelAttribute("nouvelIngredient") RecetteRequestDto dto,
                                     RedirectAttributes redirectAttributes) {
         recetteService.ajouterIngredientARecette(dto);
-        redirectAttributes.addFlashAttribute("success", "Ingrédient ajouté à la recette avec succès.");
+        redirectAttributes.addFlashAttribute("successMessage", "Ingrédient ajouté à la recette avec succès.");
         return "redirect:/recettes/plat/" + dto.getIdPlat();
     }
 
@@ -51,7 +51,7 @@ public class RecetteController {
                                       @RequestParam("idPlat") Long idPlat,
                                       RedirectAttributes redirectAttributes) {
         recetteService.supprimerIngredientDeRecette(idRecette);
-        redirectAttributes.addFlashAttribute("success", "Ingrédient retiré de la recette.");
+        redirectAttributes.addFlashAttribute("successMessage", "Ingrédient retiré de la recette.");
         return "redirect:/recettes/plat/" + idPlat;
     }
 }

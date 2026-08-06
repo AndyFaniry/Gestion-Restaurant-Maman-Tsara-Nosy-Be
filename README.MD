@@ -9,8 +9,11 @@ Application web de gestion pour le restaurant **Maman Tsara** (Nosy Be) : stocks
 - [Stack technique](#stack-technique)
 - [Prérequis](#prérequis)
 - [Démarrage rapide (Docker)](#démarrage-rapide-docker)
+- [MCP Cursor (base de données)](#mcp-cursor-base-de-données)
+- [Authentification](#authentification)
 - [Installation locale](#installation-locale)
 - [Configuration](#configuration)
+- [Schéma base (ORM Hibernate)](#schéma-base-orm-hibernate)
 - [Accès à l’application](#accès-à-lapplication)
 - [Structure du projet](#structure-du-projet)
 - [Modules fonctionnels](#modules-fonctionnels)
@@ -31,6 +34,8 @@ Application web de gestion pour le restaurant **Maman Tsara** (Nosy Be) : stocks
 | Base de données | PostgreSQL **16** |
 | Build | Maven (wrapper `mvnw` / `mvnw.cmd`) |
 | Conteneurisation | Docker + Docker Compose |
+| Auth | Spring Security (1 compte admin en mémoire via env) |
+| Schéma DB | Hibernate ORM (`ddl-auto=update`) — entités = source de vérité |
 
 Architecture : **MVC** — Controllers → Services (logique métier) → Repositories → Entités JPA.
 
@@ -57,6 +62,9 @@ Architecture : **MVC** — Controllers → Services (logique métier) → Reposi
 À la racine du projet :
 
 ```bash
+cp .env.example .env
+# Éditer .env : APP_ADMIN_PASSWORD, POSTGRES_PASSWORD, etc.
+
 docker compose up --build -d
 ```
 
@@ -74,6 +82,13 @@ docker compose logs -f app
 
 Ouvrir l’application : [http://localhost:8080](http://localhost:8080)
 
+Admin BDD (Adminer, équivalent phpMyAdmin pour PostgreSQL) : [http://localhost:8081](http://localhost:8081)
+
+- Système : **PostgreSQL**
+- Serveur : `db`
+- Utilisateur / mot de passe : ceux de `.env` (`POSTGRES_USER` / `POSTGRES_PASSWORD`)
+- Base : `restaurant`
+
 Arrêter :
 
 ```bash
@@ -90,14 +105,56 @@ docker compose down -v
 
 | Service | Conteneur | Port |
 |---------|-----------|------|
-| Application Spring Boot | `mon_app_java` | `8080` |
-| PostgreSQL 16 | `mon_postgres_db` | `5432` |
+| Application Spring Boot | `restaurant-app` | `8080` |
+| Adminer (UI BDD) | `restaurant-adminer` | `8081` |
+| PostgreSQL 16 | `restaurant-db` | `5432` |
 
-Identifiants DB (Docker) :
+Identifiants DB (Docker, valeurs par défaut) :
 
 - Base : `restaurant`
-- Utilisateur : `dev1`
-- Mot de passe : `dev`
+- Utilisateur : `dev1` (ou `POSTGRES_USER`)
+- Mot de passe : `dev` (ou `POSTGRES_PASSWORD`)
+
+---
+
+## MCP Cursor (base de données)
+
+Le projet utilise **[DBHub](https://dbhub.ai)** (`@bytebase/dbhub`) pour connecter l’agent Cursor à PostgreSQL (schéma + SQL).
+
+**Prérequis :** Node.js ≥ 22.5 et Postgres local (`docker compose up -d db` → port `5432`).
+
+1. Copier la config si besoin :
+
+```bash
+cp .cursor/mcp.json.example .cursor/mcp.json
+```
+
+2. Adapter le DSN dans [`.cursor/mcp.json`](.cursor/mcp.json) avec les mêmes identifiants que `.env` :
+
+```text
+postgres://USER:PASSWORD@127.0.0.1:5432/restaurant?sslmode=disable
+```
+
+3. Redémarrer Cursor, ou : **Settings → Tools & MCP** → activer / reconnecter `restaurant-postgres`
+
+Le fichier `.cursor/mcp.json` est ignoré par Git (secrets). Le modèle est [`.cursor/mcp.json.example`](.cursor/mcp.json.example).
+
+---
+
+## Authentification
+
+Toutes les pages métier sont protégées. Sans session → redirection vers `/login`.
+
+| Variable | Défaut (dev) | Description |
+|----------|--------------|-------------|
+| `APP_ADMIN_USERNAME` | `admin` | Identifiant unique |
+| `APP_ADMIN_PASSWORD` | `changeme` | Mot de passe (en mémoire, **pas** en base) |
+
+- Un seul compte `ROLE_ADMIN` (pas de table utilisateurs).
+- En production : définir un mot de passe fort dans `.env` (voir [.env.example](.env.example)).
+- Déconnexion : bouton dans la sidebar (`POST /logout`).
+
+Public uniquement : `/login`, assets statiques (`/css`, `/js`, `/bootstrap`, `/font-awesome`, …), `/error/**`.
 
 ---
 
@@ -170,40 +227,59 @@ java -jar target/restaurant-0.0.1-SNAPSHOT.jar
 
 Fichier principal : `src/main/resources/application.properties`
 
-| Propriété | Défaut | Description |
-|-----------|--------|-------------|
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/restaurant` | URL JDBC |
-| `SPRING_DATASOURCE_USERNAME` | `dev1` | Utilisateur DB |
-| `SPRING_DATASOURCE_PASSWORD` | `dev` | Mot de passe DB |
-| `SPRING_JPA_HIBERNATE_DDL_AUTO` | `update` | Mode schéma Hibernate |
+| Propriété / variable | Défaut | Description |
+|----------------------|--------|-------------|
+| `DATABASE_URL` | `jdbc:postgresql://localhost:5432/restaurant?user=dev1&password=dev` | URL JDBC complète (user + password inclus) |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO` | `update` | Schéma géré par Hibernate |
+| `APP_ADMIN_USERNAME` | `admin` | Login applicatif |
+| `APP_ADMIN_PASSWORD` | `changeme` | Mot de passe applicatif |
+
+Plus de `SPRING_DATASOURCE_USERNAME` / `PASSWORD` : les identifiants sont dans `DATABASE_URL` (`?user=…&password=…`).
 
 Exemple d’override en local :
 
 ```bash
 # Windows PowerShell
-$env:SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/restaurant"
-$env:SPRING_DATASOURCE_USERNAME="dev1"
-$env:SPRING_DATASOURCE_PASSWORD="dev"
+$env:DATABASE_URL="jdbc:postgresql://localhost:5432/restaurant?user=dev1&password=dev"
+$env:APP_ADMIN_USERNAME="admin"
+$env:APP_ADMIN_PASSWORD="secret"
 .\mvnw.cmd spring-boot:run
 ```
 
 ```bash
 # Linux / macOS
-export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/restaurant
-export SPRING_DATASOURCE_USERNAME=dev1
-export SPRING_DATASOURCE_PASSWORD=dev
+export DATABASE_URL="jdbc:postgresql://localhost:5432/restaurant?user=dev1&password=dev"
+export APP_ADMIN_USERNAME=admin
+export APP_ADMIN_PASSWORD=secret
 ./mvnw spring-boot:run
 ```
 
-Avec Docker Compose, ces variables sont déjà injectées vers le service `db`.
+---
 
-> `ddl-auto=update` : Hibernate crée / met à jour le schéma au démarrage. Pour la production, préférez `validate` + migrations contrôlées.
+## Schéma base (ORM Hibernate)
+
+Les **entités JPA** (`src/main/java/.../entity/`) sont la source de vérité du schéma.
+
+| Environnement | Mode |
+|---------------|------|
+| Dev (`application-dev.properties`) | `ddl-auto=update` |
+| Prod (`application-prod.properties`) | `ddl-auto=update` (surchargeable via `SPRING_JPA_HIBERNATE_DDL_AUTO`) |
+
+**Procédure serveur (base vide)**
+
+1. Configurer Postgres + variables DB + `APP_ADMIN_*`
+2. Démarrer l’app → Hibernate crée les tables depuis les `@Entity`
+3. Se connecter sur `/login`
+
+**Évolution du modèle** : modifier / ajouter une entité, redéployer ; Hibernate ajoute tables / colonnes manquantes.
+
+**Limites** : `update` n’effectue en général pas les renommages / suppressions de colonnes. Le dossier `database/` reste une référence SQL documentaire, pas le moteur de migration.
 
 ---
 
 ## Accès à l’application
 
-URL de base : **http://localhost:8080**
+URL de base : **http://localhost:8080** (connexion requise)
 
 | Module | Route |
 |--------|-------|
@@ -279,7 +355,11 @@ URL de base : **http://localhost:8080**
 
 - SGBD : **PostgreSQL**
 - Nom : `restaurant`
-- Schéma géré principalement par **Hibernate** (`ddl-auto=update`)
+- Schéma créé / mis à jour par **Hibernate** à partir des entités (`entity/`)
+
+Modules couverts par les `@Entity` : caisse, clients, commandes, fournisseurs, ingrédients/stock, livraisons, matériels, personnels (paie/absences), plats/recettes.
+
+> Les scripts `database/*.sql` (ex. `HistoriqueSalaire`, `BonusGlobaleSalairePersonnels`) peuvent contenir des tables historiques non utilisées par le code actuel — l’ORM ne les crée que s’il existe une entité correspondante.
 
 Dossier `database/` :
 

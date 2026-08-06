@@ -33,11 +33,10 @@
                             <div class="card shadow-sm">
                                 <div class="card-header bg-dark text-white">Actions</div>
                                 <div class="card-body d-flex flex-column gap-2">
-                                    <a th:href="@{/materielles/{id}/hors-service(id=${materiel.id})}" 
-                                       class="btn btn-danger" 
-                                       onclick="return confirm('Confirmer la mise hors service de cet équipement ?')">
-                                        Déclarer Hors Service
-                                    </a>
+                                    <form th:action="@{/materielles/{id}/hors-service(id=${materiel.id})}" method="post"
+                                          onsubmit="return confirm('Confirmer la mise hors service de cet équipement ?');">
+                                        <button type="submit" class="btn btn-danger w-100">Déclarer Hors Service</button>
+                                    </form>
                                 </div>
                             </div>
                         </div>

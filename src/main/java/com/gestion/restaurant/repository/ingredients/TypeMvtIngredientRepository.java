@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface TypeMvtIngredientRepository extends JpaRepository<TypeMvtIngredient, Long> {
     Optional<TypeMvtIngredient> findByLibelle(String libelle);
+
+    Optional<TypeMvtIngredient> findByLibelleIgnoreCase(String libelle);
 }

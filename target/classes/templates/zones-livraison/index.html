@@ -1,65 +1,80 @@
-Zones de Livraison
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="fr"
-      th:with="pageTitle=${ 'Zones de Livraison'}">
+      th:with="pageTitle='Zones de Livraison'">
 <head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
 <body>
-    <div class="app">
-          <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='zones-livraison')}"></aside>
 
-        <div class="main">
-                    <!-- Topbar globale -->
-        <div th:replace="~{fragments/layout :: topbar('zones-livraison')}"></div>
+<div class="app">
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='zones-livraison')}"></aside>
 
-        <div class="content">
-            <h2>Gestion des Zones de Livraison</h2>
-        
-            <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
-            <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
-        
-            <div class="d-flex justify-content-between mb-3">
-                <form th:action="@{/zones-livraison}" method="get" th:object="${filter}" class="d-flex gap-2">
-                    <input type="text" th:field="*{search}" class="form-control" placeholder="Rechercher par libellé...">
-                    <button type="submit" class="btn btn-secondary">Filtrer</button>
+  <div class="main">
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Zones de Livraison</h2>
+          <div class="breadcrumb">Accueil / <span>Zones de Livraison</span></div>
+        </div>
+        <a th:href="@{/zones-livraison/creer}" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Ajouter une Zone
+        </a>
+      </div>
+
+      <div th:replace="~{fragments/alerts :: flash}"></div>
+
+      <form th:action="@{/zones-livraison}" method="get" th:object="${filter}" class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" th:field="*{search}" placeholder="Rechercher par libellé…"/>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm">Filtrer</button>
+        </div>
+      </form>
+
+      <div class="table-card mb-4">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Libellé</th>
+              <th>Distance Min (km)</th>
+              <th>Distance Max (km)</th>
+              <th>Prix (Ar)</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="z : ${page.content}">
+              <td th:text="${z.id}">1</td>
+              <td class="fw-bold" th:text="${z.libelle}">Zone A</td>
+              <td th:text="${z.min}">0.000</td>
+              <td th:text="${z.max}">5.000</td>
+              <td th:text="${#numbers.formatDecimal(z.prix, 1, 'POINT', 2, 'COMMA')} + ' Ar'">5,00 Ar</td>
+              <td class="actions text-center">
+                <a th:href="@{/zones-livraison/modifier/{id}(id=${z.id})}" class="btn btn-warning btn-sm">
+                  <i class="bi bi-pencil"></i> Modifier
+                </a>
+                <form th:action="@{/zones-livraison/supprimer/{id}(id=${z.id})}" method="post" class="d-inline"
+                      onsubmit="return confirm('Confirmer la suppression ?');">
+                  <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="bi bi-trash"></i> Supprimer
+                  </button>
                 </form>
-                <a th:href="@{/zones-livraison/creer}" class="btn btn-primary">Ajouter une Zone</a>
-            </div>
-        
-            <table class="table table-striped border">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Libellé</th>
-                        <th>Distance Min (km)</th>
-                        <th>Distance Max (km)</th>
-                        <th>Prix (Ariary)</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="z : ${page.content}">
-                        <td th:text="${z.id}">1</td>
-                        <td th:text="${z.libelle}">Zone A</td>
-                        <td th:text="${z.min}">0.000</td>
-                        <td th:text="${z.max}">5.000</td>
-                        <td th:text="${#numbers.formatDecimal(z.prix, 1, 'POINT', 2, 'COMMA')}">5.00</td>
-                        <td class="d-flex gap-1">
-                            <a th:href="@{/zones-livraison/modifier/{id}(id=${z.id})}" class="btn btn-sm btn-warning">Modifier</a>
-                            <form th:action="@{/zones-livraison/supprimer/{id}(id=${z.id})}" method="post" onsubmit="return confirm('Confirmer la suppression ?');">
-                                <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
-                            </form>
-                        </td>
-                    </tr>
-                    <tr th:if="${#lists.isEmpty(page.content)}">
-                        <td colspan="6" class="text-center">Aucune zone de livraison trouvée.</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        </div>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(page.content)}">
+              <td colspan="6" class="text-center text-muted py-4">Aucune zone de livraison trouvée.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div th:replace="~{layout/footer :: footer}"></div>
+  </div>
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
 <th:block th:replace="~{layout/scripts :: scripts}"></th:block>
 </body>
 </html>

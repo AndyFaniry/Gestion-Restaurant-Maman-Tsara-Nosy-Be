@@ -1,64 +1,72 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="fr"
-      th:with="pageTitle=${ 'Gestion caisse'}">
+      th:with="pageTitle='Gestion de la Caisse'">
 <head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
 <body>
 
 <div class="app">
-
-    <!-- Sidebar globale avec l'onglet 'caisse' actif -->
   <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='caisse')}"></aside>
 
-    <div class="main">
-        <!-- Topbar globale -->
-        <div th:replace="~{fragments/layout :: topbar('Gestion de la Caisse')}"></div>
+  <div class="main">
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
 
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h2>Mouvements de Caisse</h2>
-                    <div class="breadcrumb">Accueil / <span>Caisse</span></div>
-                </div>
-                <a th:href="@{/caisse/new}" class="btn btn-primary btn-sm">+ Saisir un Mouvement</a>
-            </div>
-
-            <div class="card">
-                <section class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Date</th>
-                                <th>Type Mouvement</th>
-                                <th>Montant (Ar)</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr th:each="m : ${mouvementsList}">
-                                <td th:text="${m.id}">1</td>
-                                <td th:text="${#temporals.format(m.dateMouvement, 'dd/MM/yyyy HH:mm')}">30/07/2026 14:30</td>
-                                <td th:text="${m.typeMouvement != null ? m.typeMouvement.libelle : 'N/A'}">Type</td>
-                                <td th:text="${#numbers.formatDecimal(m.montant, 1, 'WHITESPACE', 2, 'POINT')} + ' Ar'">45 000.00 Ar</td>
-                                <td class="actions">
-                                    <a th:href="@{/caisse/edit/{id}(id=${m.id})}" class="btn btn-sm btn-secondary">Modifier</a>
-                                    <a th:href="@{/caisse/delete/{id}(id=${m.id})}" class="btn btn-sm btn-danger" onclick="return confirm('Supprimer ce mouvement ?');">Supprimer</a>
-                                </td>
-                            </tr>
-                            <tr th:if="${#lists.isEmpty(mouvementsList)}">
-                                <td colspan="5" style="text-align: center; color: #888;">Aucun mouvement de caisse enregistré.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </section>
-            </div>
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Mouvements de Caisse</h2>
+          <div class="breadcrumb">Accueil / <span>Caisse</span></div>
         </div>
-    </div>
+        <a th:href="@{/caisse/new}" class="btn btn-primary">
+          <i class="bi bi-plus-lg"></i> Saisir un Mouvement
+        </a>
+      </div>
 
+      <div th:replace="~{fragments/alerts :: flash}"></div>
+
+      <div class="table-card mb-4">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Date</th>
+              <th>Type Mouvement</th>
+              <th>Montant (Ar)</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="m : ${mouvementsList}">
+              <td th:text="${m.id}">1</td>
+              <td th:text="${#temporals.format(m.dateMouvement, 'dd/MM/yyyy')}">30/07/2026</td>
+              <td>
+                <span class="badge bg-info text-dark"
+                      th:text="${m.typeMouvement != null ? m.typeMouvement.libelle : 'N/A'}">Type</span>
+              </td>
+              <td class="fw-bold"
+                  th:text="${#numbers.formatDecimal(m.montant, 1, 'POINT', 2, 'COMMA')} + ' Ar'">45 000,00 Ar</td>
+              <td class="actions text-center">
+                <a th:href="@{/caisse/edit/{id}(id=${m.id})}" class="btn btn-warning btn-sm">
+                  <i class="bi bi-pencil"></i> Modifier
+                </a>
+                <form th:action="@{/caisse/delete/{id}(id=${m.id})}" method="post" class="d-inline"
+                      onsubmit="return confirm('Supprimer ce mouvement ?');">
+                  <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="bi bi-trash"></i> Supprimer
+                  </button>
+                </form>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(mouvementsList)}">
+              <td colspan="5" class="text-center text-muted py-4">Aucun mouvement de caisse enregistré.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div th:replace="~{layout/footer :: footer}"></div>
 <th:block th:replace="~{layout/scripts :: scripts}"></th:block>
-
 </body>
 </html>

@@ -1,10 +1,14 @@
 package com.gestion.restaurant.controller.client;
 
-import com.gestion.restaurant.dto.clients.*;
+import com.gestion.restaurant.dto.clients.ClientRequestDto;
+import com.gestion.restaurant.dto.clients.ClientSearchCriteria;
 import com.gestion.restaurant.service.clients.ClientsService;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/clients")
@@ -31,8 +35,16 @@ public class ClientsController {
     }
 
     @PostMapping("/save")
-    public String saveClient(@ModelAttribute("client") ClientRequestDto dto) {
+    public String saveClient(@Valid @ModelAttribute("client") ClientRequestDto dto,
+                             BindingResult result,
+                             Model model,
+                             RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            model.addAttribute("typesClient", clientsService.findAllTypes());
+            return "clients/form";
+        }
         clientsService.saveFromDto(dto);
+        redirectAttributes.addFlashAttribute("successMessage", "Client enregistré avec succès.");
         return "redirect:/clients";
     }
 
@@ -43,9 +55,10 @@ public class ClientsController {
         return "clients/form";
     }
 
-    @GetMapping("/delete/{id}")
-    public String deleteClient(@PathVariable("id") Long id) {
+    @PostMapping("/delete/{id}")
+    public String deleteClient(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         clientsService.deleteById(id);
+        redirectAttributes.addFlashAttribute("successMessage", "Client supprimé.");
         return "redirect:/clients";
     }
 }

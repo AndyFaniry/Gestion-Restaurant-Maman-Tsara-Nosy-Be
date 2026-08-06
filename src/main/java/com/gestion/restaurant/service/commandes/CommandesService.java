@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CommandesService {
@@ -77,16 +78,59 @@ public class CommandesService {
         return detailsCommandesRepository.findByCommandeId(commandeId);
     }
 
+    @Transactional(readOnly = true)
+    public List<Clients> findAllClients() {
+        return clientsRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ZonesLivraison> findAllZones() {
+        return zoneLivraisonRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Plats> findAllPlats() {
+        return platsRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public CommandeCreateRequestDto toCreateDto(Long id) {
+        Commandes commande = findById(id);
+        CommandeCreateRequestDto dto = new CommandeCreateRequestDto();
+        dto.setId(commande.getId());
+        dto.setIdClient(commande.getClient() != null ? commande.getClient().getId() : null);
+        dto.setIdZoneLivraison(commande.getZoneLivraison() != null ? commande.getZoneLivraison().getId() : null);
+        dto.setDateCommande(commande.getDateCommande());
+        dto.setLignes(findDetailsByCommandeId(id).stream().map(d -> {
+            CommandeLigneRequestDto l = new CommandeLigneRequestDto();
+            l.setIdPlat(d.getPlat().getId());
+            l.setQuantite(d.getQuantite());
+            return l;
+        }).collect(Collectors.toList()));
+        return dto;
+    }
+
+    /**
+     * Crée une commande (stock, facture, caisse).
+     * La modification d'une commande déjà facturée est interdite pour éviter
+     * les doubles déstockages / doubles encaissements.
+     */
     @Transactional
-    public Commandes creereOuMettreAJourCommande(CommandeCreateRequestDto dto) {
+    public Commandes creerCommande(CommandeCreateRequestDto dto) {
+        if (dto.getId() != null) {
+            throw new BusinessRuleException(
+                    "Impossible de modifier une commande déjà enregistrée (stock et caisse déjà impactés). "
+                            + "Supprimez-la puis créez-en une nouvelle.",
+                    "/commandes");
+        }
         if (dto.getIdClient() == null) {
-            throw new BusinessRuleException("Le client est obligatoire.");
+            throw new BusinessRuleException("Le client est obligatoire.", "/commandes/new");
         }
         if (dto.getIdZoneLivraison() == null) {
-            throw new BusinessRuleException("La zone de livraison est obligatoire.");
+            throw new BusinessRuleException("La zone de livraison est obligatoire.", "/commandes/new");
         }
         if (dto.getLignes() == null || dto.getLignes().isEmpty()) {
-            throw new BusinessRuleException("La commande doit contenir au moins un plat.");
+            throw new BusinessRuleException("La commande doit contenir au moins un plat.", "/commandes/new");
         }
 
         Clients client = clientsRepository.findById(dto.getIdClient())
@@ -97,76 +141,94 @@ public class CommandesService {
 
         LocalDate dateMvt = dto.getDateCommande() != null ? dto.getDateCommande() : LocalDate.now();
 
-        Commandes commande;
-        if (dto.getId() != null) {
-            commande = findById(dto.getId());
-            detailsCommandesRepository.deleteByCommandeId(commande.getId());
-        } else {
-            commande = new Commandes();
-        }
-
+        Commandes commande = new Commandes();
         commande.setClient(client);
         commande.setZoneLivraison(zone);
         commande.setDateCommande(dateMvt);
 
-        BigDecimal totalCumule = zone.getPrix();
+        BigDecimal totalCumule = zone.getPrix() != null ? zone.getPrix() : BigDecimal.ZERO;
         commande.setMontantTotal(totalCumule);
         Commandes commandeSauvegardee = commandesRepository.save(commande);
 
         for (CommandeLigneRequestDto ligneDto : dto.getLignes()) {
-            if (ligneDto.getIdPlat() != null && ligneDto.getQuantite() != null && ligneDto.getQuantite().compareTo(BigDecimal.ZERO) > 0) {
-                Plats plat = platsRepository.findById(ligneDto.getIdPlat())
-                        .orElseThrow(() -> new ResourceNotFoundException("Plat introuvable : " + ligneDto.getIdPlat()));
+            if (ligneDto.getIdPlat() == null || ligneDto.getQuantite() == null
+                    || ligneDto.getQuantite().compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
 
-                BigDecimal montantLigne = plat.getPrixVente().multiply(ligneDto.getQuantite());
+            Plats plat = platsRepository.findById(ligneDto.getIdPlat())
+                    .orElseThrow(() -> new ResourceNotFoundException("Plat introuvable : " + ligneDto.getIdPlat()));
 
-                DetailsCommandes detail = new DetailsCommandes();
-                detail.setCommande(commandeSauvegardee);
-                detail.setPlat(plat);
-                detail.setQuantite(ligneDto.getQuantite());
-                detail.setPrixUnitaire(plat.getPrixVente());
-                detail.setMontant(montantLigne);
+            BigDecimal montantLigne = plat.getPrixVente().multiply(ligneDto.getQuantite());
 
-                detailsCommandesRepository.save(detail);
+            DetailsCommandes detail = new DetailsCommandes();
+            detail.setCommande(commandeSauvegardee);
+            detail.setPlat(plat);
+            detail.setQuantite(ligneDto.getQuantite());
+            detail.setPrixUnitaire(plat.getPrixVente());
+            detail.setMontant(montantLigne);
+            detailsCommandesRepository.save(detail);
 
-                totalCumule = totalCumule.add(montantLigne);
+            totalCumule = totalCumule.add(montantLigne);
 
-                // Déstockage automatique des ingrédients via les recettes
-                List<RecettePlats> recettes = recettePlatsRepository.findByPlatId(plat.getId());
-                for (RecettePlats rp : recettes) {
-                    Ingredients ingredient = rp.getIngredient();
-                    BigDecimal quantiteIngredientTotale = rp.getQuantiteRequise().multiply(ligneDto.getQuantite());
-                    
-                    ingredientsService.enregistrerSortieOuPerte(
-                            ingredient.getId(),
-                            quantiteIngredientTotale,
-                            "Sortie",
-                            dateMvt
-                    );
-                }
+            List<RecettePlats> recettes = recettePlatsRepository.findByPlatId(plat.getId());
+            for (RecettePlats rp : recettes) {
+                Ingredients ingredient = rp.getIngredient();
+                BigDecimal quantiteIngredientTotale = rp.getQuantiteRequise().multiply(ligneDto.getQuantite());
+                ingredientsService.enregistrerSortieOuPerte(
+                        ingredient.getId(),
+                        quantiteIngredientTotale,
+                        IngredientsService.MVT_SORTIE_CUISINE,
+                        dateMvt
+                );
             }
         }
 
         commandeSauvegardee.setMontantTotal(totalCumule);
         Commandes commandeFinale = commandesRepository.save(commandeSauvegardee);
 
-        // Enregistrement de la facture et entrée en caisse
         FacturesCommandes facture = new FacturesCommandes();
         facture.setCommande(commandeFinale);
         facture.setDateFacture(dateMvt);
         facture.setMontantTotal(totalCumule);
         facturesCommandesRepository.save(facture);
 
-        caisseService.enregistrerEntree(totalCumule, dateMvt);
+        if (totalCumule.compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerEntree(totalCumule, dateMvt);
+        }
 
         return commandeFinale;
     }
 
+    /** @deprecated utiliser {@link #creerCommande(CommandeCreateRequestDto)} */
+    @Transactional
+    public Commandes creereOuMettreAJourCommande(CommandeCreateRequestDto dto) {
+        return creerCommande(dto);
+    }
+
     @Transactional
     public void deleteById(Long id) {
-        if (!commandesRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Commande introuvable avec l'ID : " + id);
+        Commandes commande = findById(id);
+        LocalDate dateMvt = commande.getDateCommande() != null ? commande.getDateCommande() : LocalDate.now();
+        List<DetailsCommandes> details = detailsCommandesRepository.findByCommandeId(id);
+
+        for (DetailsCommandes detail : details) {
+            Plats plat = detail.getPlat();
+            if (plat == null || detail.getQuantite() == null) {
+                continue;
+            }
+            List<RecettePlats> recettes = recettePlatsRepository.findByPlatId(plat.getId());
+            for (RecettePlats rp : recettes) {
+                BigDecimal quantiteIngredientTotale = rp.getQuantiteRequise().multiply(detail.getQuantite());
+                ingredientsService.reintegrerStock(rp.getIngredient().getId(), quantiteIngredientTotale, dateMvt);
+            }
         }
+
+        if (commande.getMontantTotal() != null && commande.getMontantTotal().compareTo(BigDecimal.ZERO) > 0) {
+            caisseService.enregistrerSortie(commande.getMontantTotal(), dateMvt);
+        }
+
+        facturesCommandesRepository.deleteByCommande_Id(id);
         detailsCommandesRepository.deleteByCommandeId(id);
         commandesRepository.deleteById(id);
     }
