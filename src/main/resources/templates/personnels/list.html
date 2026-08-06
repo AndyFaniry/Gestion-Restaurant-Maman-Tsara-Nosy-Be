@@ -50,7 +50,7 @@
               <td th:text="${p.prenom != null ? p.prenom : '-'}">Prénom</td>
               <td th:text="${p.contact != null ? p.contact : '-'}">0320000000</td>
               <td>
-                <span class="badge badge-info" 
+                <span class="badge bg-info text-dark" 
                       th:text="${p.roleLibelle != null ? p.roleLibelle : (p.rolePersonnels != null ? p.rolePersonnels.libelle : 'N/A')}">
                   Rôle
                 </span>

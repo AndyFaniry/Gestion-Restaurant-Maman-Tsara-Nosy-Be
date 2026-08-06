@@ -81,7 +81,7 @@ public class CommandesController {
         return "commandes/form";
     }
 
-    @GetMapping("/{id}/detail")
+     @GetMapping({"/{id}/detail", "/detail/{id}"})
     public String showDetail(@PathVariable("id") Long id, Model model) {
         model.addAttribute("commande", commandesService.findById(id));
         model.addAttribute("details", commandesService.findDetailsByCommandeId(id));

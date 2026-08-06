@@ -43,7 +43,7 @@
               <div class="field-group">
                 <label class="field-label">Poste / Rôle</label>
                 <div>
-                  <span class="badge badge-info" 
+                  <span class="badge bg-info text-dark" 
                         th:text="${personnel.rolePersonnels != null ? personnel.rolePersonnels.libelle : (personnel.role != null ? personnel.role : '-')}">
                     Poste
                   </span>
@@ -191,7 +191,7 @@
                   <td th:text="${abs.dateDebut != null ? #temporals.format(abs.dateDebut, 'dd/MM/yyyy') : '-'}">01/01/2026</td>
                   <td th:text="${abs.dateFin != null ? #temporals.format(abs.dateFin, 'dd/MM/yyyy') : '-'}">02/01/2026</td>
                   <td>
-                    <span class="badge badge-info" 
+                    <span class="badge bg-info text-dark" 
                           th:text="${abs.raisonAbsence != null ? abs.raisonAbsence.libelle : (abs.raison != null ? abs.raison : '-')}">
                       Motif
                     </span>

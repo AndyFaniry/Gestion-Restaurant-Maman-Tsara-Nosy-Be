@@ -68,7 +68,7 @@
           <div class="field-group">
             <label class="field-label">Montant Total</label>
             <div>
-              <span class="badge badge-info fs-6" 
+              <span class="badge bg-info text-dark fs-6" 
                     th:text="${commande.montantTotal != null ? #numbers.formatDecimal(commande.montantTotal, 1, 'POINT', 2, 'COMMA') + ' Ar' : '0,00 Ar'}">
                 0,00 Ar
               </span>
