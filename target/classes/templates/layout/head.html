@@ -1,18 +1,15 @@
 <head th:fragment="head(pageTitle)">
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title th:text="${pageTitle != null ? pageTitle + ' — Maman Tsara Nosy-Be' : 'Maman Tsara Nosy-Be'}">Gestion Restaurant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1729" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title th:text="${pageTitle != null ? pageTitle + ' — Maman Tsara' : 'Maman Tsara'}">Gestion Restaurant</title>
 
-    <!-- ===== CSS LOCAUX ===== -->
-    <!-- Bootstrap CSS -->
+    <link rel="icon" type="image/svg+xml" th:href="@{/img/favicon.svg}" />
+    <link rel="apple-touch-icon" th:href="@{/img/favicon.svg}" />
+
     <link rel="stylesheet" th:href="@{/bootstrap/css/bootstrap.min.css}" />
-
-    <!-- Font Awesome CSS -->
     <link rel="stylesheet" th:href="@{/font-awesome/css/all.min.css}" />
-
-    <!-- Bootstrap Icons CSS -->
     <link rel="stylesheet" th:href="@{/bootstrap-icons/bootstrap-icons.css}" />
-
-    <!-- Ton style personnalisé (doit être après les autres pour surcharger) -->
     <link rel="stylesheet" th:href="@{/css/style.css}" />
 </head>

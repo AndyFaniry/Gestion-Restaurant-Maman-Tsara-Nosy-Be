@@ -1,11 +1,15 @@
 package com.gestion.restaurant.controller.personnels;
 
-import com.gestion.restaurant.dto.personnels.*;
+import com.gestion.restaurant.dto.personnels.PersonnelRequestDto;
+import com.gestion.restaurant.dto.personnels.PersonnelSearchCriteria;
 import com.gestion.restaurant.service.personnels.PersonnelsService;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,8 +39,16 @@ public class PersonnelsController {
     }
 
     @PostMapping("/save")
-    public String save(@ModelAttribute("personnel") PersonnelRequestDto dto) {
-        PersonnelResponseDto saved = personnelsService.saveFromDto(dto);
+    public String save(@Valid @ModelAttribute("personnel") PersonnelRequestDto dto,
+                       BindingResult result,
+                       Model model,
+                       RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            model.addAttribute("roles", personnelsService.findAllRoles());
+            return "personnels/form";
+        }
+        var saved = personnelsService.saveFromDto(dto);
+        redirectAttributes.addFlashAttribute("successMessage", "Personnel enregistré.");
         return "redirect:/personnels/" + saved.getId() + "/detail";
     }
 
@@ -47,13 +59,14 @@ public class PersonnelsController {
         return "personnels/form";
     }
 
-    @GetMapping("/delete/{id}")
-    public String delete(@PathVariable("id") Long id) {
+    @PostMapping("/delete/{id}")
+    public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         personnelsService.deleteById(id);
+        redirectAttributes.addFlashAttribute("successMessage", "Personnel supprimé.");
         return "redirect:/personnels";
     }
 
-  @GetMapping({"/{id}/detail", "/detail/{id}"})
+    @GetMapping({"/{id}/detail", "/detail/{id}"})
     public String detail(@PathVariable("id") Long id, Model model) {
         model.addAttribute("personnel", personnelsService.findById(id));
         model.addAttribute("historiquePaie", personnelsService.findHistoriquePaie(id));
@@ -66,18 +79,25 @@ public class PersonnelsController {
     public String genererPaie(@PathVariable("id") Long id,
                               @RequestParam("salaire") BigDecimal salaire,
                               @RequestParam(value = "prime", required = false) BigDecimal prime,
-                              @RequestParam(value = "datePaie", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate datePaie) {
+                              @RequestParam(value = "datePaie", required = false)
+                              @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate datePaie,
+                              RedirectAttributes redirectAttributes) {
         personnelsService.genererFichePaie(id, salaire, prime, datePaie);
+        redirectAttributes.addFlashAttribute("successMessage", "Fiche de paie générée.");
         return "redirect:/personnels/" + id + "/detail";
     }
 
     @PostMapping("/{id}/absence/save")
     public String enregistrerAbsence(@PathVariable("id") Long id,
-                                     @RequestParam("dateDebut") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDebut,
-                                     @RequestParam("dateFin") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFin,
+                                     @RequestParam("dateDebut")
+                                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDebut,
+                                     @RequestParam("dateFin")
+                                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFin,
                                      @RequestParam("idRaison") Long idRaison,
-                                     @RequestParam(value = "commentaire", required = false) String commentaire) {
+                                     @RequestParam(value = "commentaire", required = false) String commentaire,
+                                     RedirectAttributes redirectAttributes) {
         personnelsService.enregistrerAbsence(id, dateDebut, dateFin, idRaison, commentaire);
+        redirectAttributes.addFlashAttribute("successMessage", "Absence enregistrée.");
         return "redirect:/personnels/" + id + "/detail";
     }
 }

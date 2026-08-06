@@ -53,7 +53,7 @@ public class ZoneLivraisonController {
         try {
             service.save(dto);
             redirectAttributes.addFlashAttribute("successMessage", "Zone de livraison enregistrée avec succès.");
-        } catch (IllegalArgumentException e) {
+        } catch (com.gestion.restaurant.exception.BusinessRuleException e) {
             result.rejectValue("libelle", "error.zone", e.getMessage());
             return "zones-livraison/form";
         }
@@ -66,8 +66,8 @@ public class ZoneLivraisonController {
         try {
             service.deleteById(id);
             redirectAttributes.addFlashAttribute("successMessage", "Zone de livraison supprimée.");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Impossible de supprimer cette zone.");
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Impossible de supprimer cette zone (données liées).");
         }
         return "redirect:/zones-livraison";
     }

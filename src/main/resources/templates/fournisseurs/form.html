@@ -40,10 +40,12 @@
             </div>
             <div class="field-group">
               <label class="field-label">Type de fournisseur <span class="required">*</span></label>
-              <select th:field="*{typeFournisseurs}" required>
+              <select th:field="*{idTypeFournisseur}" required>
                 <option value="">-- Sélectionner --</option>
                 <option th:each="tf : ${typesFournisseur}" th:value="${tf.id}" th:text="${tf.libelle}"></option>
               </select>
+              <div class="text-danger" th:if="${#fields.hasErrors('idTypeFournisseur')}"
+                   th:errors="*{idTypeFournisseur}"></div>
             </div>
           </div>
 

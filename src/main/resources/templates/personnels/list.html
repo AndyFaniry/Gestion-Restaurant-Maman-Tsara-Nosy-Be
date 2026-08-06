@@ -29,6 +29,8 @@
         </a>
       </div>
 
+      <div th:replace="~{fragments/alerts :: flash}"></div>
+
       <!-- Tableau des résultats -->
       <div class="table-card mb-4">
         <table class="data-table">
@@ -65,10 +67,12 @@
                 <a th:href="@{/personnels/edit/{id}(id=${p.id})}" class="btn btn-warning btn-sm" title="Modifier">
                   <i class="bi bi-pencil"></i> Modifier
                 </a>
-                <a th:href="@{/personnels/delete/{id}(id=${p.id})}" class="btn btn-danger btn-sm" 
-                   onclick="return confirm('Supprimer cet employé ?');" title="Supprimer">
-                  <i class="bi bi-trash"></i> Supprimer
-                </a>
+                <form th:action="@{/personnels/delete/{id}(id=${p.id})}" method="post" class="d-inline"
+                      onsubmit="return confirm('Supprimer cet employé ?');">
+                  <button type="submit" class="btn btn-danger btn-sm" title="Supprimer">
+                    <i class="bi bi-trash"></i> Supprimer
+                  </button>
+                </form>
               </td>
             </tr>
             <tr th:if="${#lists.isEmpty(personnelsList)}">

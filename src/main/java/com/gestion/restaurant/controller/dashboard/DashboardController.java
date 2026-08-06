@@ -1,9 +1,6 @@
 package com.gestion.restaurant.controller.dashboard;
 
-import com.gestion.restaurant.repository.commandes.CommandesRepository;
-import com.gestion.restaurant.repository.clients.ClientsRepository;
-import com.gestion.restaurant.repository.ingredients.IngredientsRepository;
-import com.gestion.restaurant.repository.personnels.PersonnelsRepository;
+import com.gestion.restaurant.service.dashboard.DashboardService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,28 +10,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping({"/", "/dashboard"})
 public class DashboardController {
 
-    private final CommandesRepository commandesRepository;
-    private final ClientsRepository clientsRepository;
-    private final IngredientsRepository ingredientsRepository;
-    private final PersonnelsRepository personnelsRepository;
+    private final DashboardService dashboardService;
 
-    public DashboardController(CommandesRepository commandesRepository,
-                               ClientsRepository clientsRepository,
-                               IngredientsRepository ingredientsRepository,
-                               PersonnelsRepository personnelsRepository) {
-        this.commandesRepository = commandesRepository;
-        this.clientsRepository = clientsRepository;
-        this.ingredientsRepository = ingredientsRepository;
-        this.personnelsRepository = personnelsRepository;
+    public DashboardController(DashboardService dashboardService) {
+        this.dashboardService = dashboardService;
     }
 
     @GetMapping
     public String dashboard(Model model) {
-        model.addAttribute("totalCommandes", commandesRepository.count());
-        model.addAttribute("totalClients", clientsRepository.count());
-        model.addAttribute("totalIngredients", ingredientsRepository.count());
-        model.addAttribute("totalPersonnels", personnelsRepository.count());
-
+        DashboardService.DashboardStats stats = dashboardService.getStats();
+        model.addAttribute("totalCommandes", stats.totalCommandes());
+        model.addAttribute("totalClients", stats.totalClients());
+        model.addAttribute("totalIngredients", stats.totalIngredients());
+        model.addAttribute("totalPersonnels", stats.totalPersonnels());
         return "dashboard/index";
     }
 }

@@ -1,82 +1,89 @@
-État Global des Stocks
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="fr"
-      th:with="pageTitle=${ 'État Global des Stocks'}">
+      th:with="pageTitle='État Global des Stocks'">
 <head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
-<body class="bg-light">
+<body>
+
 <div class="app">
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='stocks')}"></aside>
 
-    <!-- Sidebar globale avec l'onglet 'caisse' actif -->
-  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='ingredients')}"></aside>
-    <div class="main">
-        <div th:replace="~{fragments/layout :: topbar('État Global des Stocks')}"></div>
+  <div class="main">
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
 
-        <div class="content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>État des Stocks (Ingrédients)</h2>
-                <a th:href="@{/ingredients}" class="btn btn-outline-secondary">&larr; Retour aux Ingrédients</a>
-            </div>
-
-            <!-- Cartes KPI -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card bg-success text-white shadow-sm">
-                        <div class="card-body">
-                            <h5>Stock Normal / Correct</h5>
-                            <h2 th:text="${nombreStockOk}">0</h2>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card bg-warning text-dark shadow-sm">
-                        <div class="card-body">
-                            <h5>Alerte / Stock Faible (&lt; 5)</h5>
-                            <h2 th:text="${nombreAlerteStock}">0</h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Table Global Stock -->
-            <div class="table-responsive bg-white shadow-sm rounded">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-dark">
-                    <tr>
-                        <th>Ingrédient</th>
-                        <th>Catégorie</th>
-                        <th>Quantité en Stock</th>
-                        <th>Unité</th>
-                        <th>Statut Stock</th>
-                        <th class="text-end">Action</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="item : ${stockItems}">
-                        <td><strong th:text="${item.ingredient.nom}"></strong></td>
-                        <td th:text="${item.ingredient.categorieIngredients != null ? item.ingredient.categorieIngredients.libelle : '-'}"></td>
-                        <td th:text="${item.quantiteActuelle}"></td>
-                        <td th:text="${item.ingredient.unite != null ? item.ingredient.unite.symbole : ''}"></td>
-                        <td>
-                            <span th:if="${item.quantiteActuelle &lt; 5}" class="badge bg-danger">Alerte Faible</span>
-                            <span th:if="${item.quantiteActuelle &gt;= 5}" class="badge bg-success">En Stock</span>
-                        </td>
-                        <td class="text-end">
-                            <a th:href="@{/ingredients/{id}/detail(id=${item.ingredient.id})}" class="btn btn-sm btn-primary">Mouvement</a>
-                        </td>
-                    </tr>
-                    <tr th:if="${#lists.isEmpty(stockItems)}">
-                        <td colspan="6" class="text-center text-muted py-4">Aucun stock disponible.</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>État des Stocks</h2>
+          <div class="breadcrumb">Accueil / <span>Stocks</span></div>
         </div>
-    </div>
-</div>
+        <a th:href="@{/ingredients}" class="btn btn-secondary">&larr; Retour aux Ingrédients</a>
+      </div>
 
+      <div th:replace="~{fragments/alerts :: flash}"></div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Stock Correct</div>
+            <div class="kpi-icon bg-green">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${nombreStockOk}">0</div>
+          <div class="kpi-delta up">Quantité ≥ seuil</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <div class="kpi-label">Alerte Stock Faible</div>
+            <div class="kpi-icon bg-amber">
+              <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value" th:text="${nombreAlerteStock}">0</div>
+          <div class="kpi-delta down"
+               th:text="'Sous le seuil (' + ${seuilStockFaible} + ')'">Sous le seuil</div>
+        </div>
+      </div>
+
+      <div class="table-card mb-4">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ingrédient</th>
+              <th>Catégorie</th>
+              <th>Quantité</th>
+              <th>Unité</th>
+              <th>Statut</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="item : ${stockItems}">
+              <td class="fw-bold" th:text="${item.ingredient.nom}">Nom</td>
+              <td th:text="${item.ingredient.categorieIngredients != null ? item.ingredient.categorieIngredients.libelle : '-'}">Cat</td>
+              <td th:text="${item.quantiteActuelle}">0</td>
+              <td th:text="${item.ingredient.unite != null ? item.ingredient.unite.symbole : '-'}">kg</td>
+              <td>
+                <span th:if="${item.quantiteActuelle &lt; seuilStockFaible}" class="badge bg-danger">Alerte Faible</span>
+                <span th:if="${item.quantiteActuelle &gt;= seuilStockFaible}" class="badge bg-success">En Stock</span>
+              </td>
+              <td class="actions text-center">
+                <a th:href="@{/ingredients/{id}/detail(id=${item.ingredient.id})}" class="btn btn-primary btn-sm">
+                  Mouvement
+                </a>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(stockItems)}">
+              <td colspan="6" class="text-center text-muted py-4">Aucun stock disponible.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div th:replace="~{layout/footer :: footer}"></div>
 <th:block th:replace="~{layout/scripts :: scripts}"></th:block>
-
 </body>
 </html>

@@ -77,6 +77,17 @@ public class MateriellesService {
     }
 
     @Transactional(readOnly = true)
+    public MaterielRequestDto toRequestDto(Long id) {
+        Materielles m = findById(id);
+        MaterielRequestDto dto = new MaterielRequestDto();
+        dto.setId(m.getId());
+        dto.setNom(m.getNom());
+        dto.setDateEntree(m.getDateEntree());
+        dto.setIdCategorie(m.getCategorieMaterielles() != null ? m.getCategorieMaterielles().getId() : null);
+        dto.setIdStatut(m.getStatutMaterielles() != null ? m.getStatutMaterielles().getId() : null);
+        return dto;
+    }
+
     public MaterielResponseDto findDtoById(Long id) {
         return MaterielMapper.toDto(findById(id));
     }

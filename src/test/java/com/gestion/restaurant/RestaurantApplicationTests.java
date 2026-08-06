@@ -1,13 +1,12 @@
 package com.gestion.restaurant;
 
+import com.gestion.restaurant.support.AbstractPostgresIT;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class RestaurantApplicationTests {
+class RestaurantApplicationTests extends AbstractPostgresIT {
 
-	@Test
-	void contextLoads() {
-	}
-
+    @Test
+    void contextLoads() {
+        // Smoke : contexte Spring + Postgres Testcontainers
+    }
 }

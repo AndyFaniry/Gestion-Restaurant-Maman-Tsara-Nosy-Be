@@ -1,56 +1,62 @@
 package com.gestion.restaurant.controller.caisse;
 
-import com.gestion.restaurant.entity.caisse.MouvementCaisse;
-import com.gestion.restaurant.repository.caisse.MouvementCaisseRepository;
-import com.gestion.restaurant.repository.caisse.TypeMouvementCaisseRepository;
+import com.gestion.restaurant.dto.caisse.MouvementCaisseRequestDto;
+import com.gestion.restaurant.service.caisse.CaisseService;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/caisse")
 public class CaisseController {
 
-    private final MouvementCaisseRepository mouvementCaisseRepository;
-    private final TypeMouvementCaisseRepository typeMouvementRepo;
+    private final CaisseService caisseService;
 
-    public CaisseController(MouvementCaisseRepository mouvementCaisseRepository, 
-                            TypeMouvementCaisseRepository typeMouvementRepo) {
-        this.mouvementCaisseRepository = mouvementCaisseRepository;
-        this.typeMouvementRepo = typeMouvementRepo;
+    public CaisseController(CaisseService caisseService) {
+        this.caisseService = caisseService;
     }
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("mouvementsList", mouvementCaisseRepository.findAll());
+        model.addAttribute("mouvementsList", caisseService.findAll());
         return "caisse/list";
     }
 
     @GetMapping("/new")
     public String showCreate(Model model) {
-        model.addAttribute("mouvement", new MouvementCaisse());
-        model.addAttribute("typesMouvement", typeMouvementRepo.findAll());
+        model.addAttribute("mouvement", new MouvementCaisseRequestDto());
+        model.addAttribute("typesMouvement", caisseService.findAllTypes());
         return "caisse/form";
     }
 
     @PostMapping("/save")
-    public String save(@ModelAttribute("mouvement") MouvementCaisse mouvement) {
-        mouvementCaisseRepository.save(mouvement);
+    public String save(@Valid @ModelAttribute("mouvement") MouvementCaisseRequestDto dto,
+                       BindingResult result,
+                       Model model,
+                       RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            model.addAttribute("typesMouvement", caisseService.findAllTypes());
+            return "caisse/form";
+        }
+        caisseService.saveFromDto(dto);
+        redirectAttributes.addFlashAttribute("successMessage", "Mouvement de caisse enregistré.");
         return "redirect:/caisse";
     }
 
     @GetMapping("/edit/{id}")
     public String showEdit(@PathVariable("id") Long id, Model model) {
-        MouvementCaisse m = mouvementCaisseRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Mouvement introuvable : " + id));
-        model.addAttribute("mouvement", m);
-        model.addAttribute("typesMouvement", typeMouvementRepo.findAll());
+        model.addAttribute("mouvement", caisseService.toRequestDto(id));
+        model.addAttribute("typesMouvement", caisseService.findAllTypes());
         return "caisse/form";
     }
 
-    @GetMapping("/delete/{id}")
-    public String delete(@PathVariable("id") Long id) {
-        mouvementCaisseRepository.deleteById(id);
+    @PostMapping("/delete/{id}")
+    public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
+        caisseService.deleteById(id);
+        redirectAttributes.addFlashAttribute("successMessage", "Mouvement de caisse supprimé.");
         return "redirect:/caisse";
     }
 }

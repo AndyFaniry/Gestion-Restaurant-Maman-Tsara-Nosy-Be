@@ -3,6 +3,8 @@ package com.gestion.restaurant.service.livraisons;
 import com.gestion.restaurant.dto.livraisons.ZoneLivraisonDto;
 import com.gestion.restaurant.dto.livraisons.ZoneLivraisonFilterDto;
 import com.gestion.restaurant.entity.livraisons.ZonesLivraison;
+import com.gestion.restaurant.exception.BusinessRuleException;
+import com.gestion.restaurant.exception.ResourceNotFoundException;
 import com.gestion.restaurant.repository.livraisons.ZoneLivraisonRepository;
 import com.gestion.restaurant.specification.livraisons.ZoneLivraisonSpecification;
 import org.springframework.data.domain.Page;
@@ -19,22 +21,27 @@ public class ZoneLivraisonService {
         this.repository = repository;
     }
 
+    @Transactional(readOnly = true)
     public Page<ZonesLivraison> findAll(ZoneLivraisonFilterDto filter, Pageable pageable) {
         return repository.findAll(ZoneLivraisonSpecification.getSpecifications(filter), pageable);
     }
 
+    @Transactional(readOnly = true)
     public ZonesLivraison findById(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Zone de livraison non trouvée avec l'ID : " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Zone de livraison non trouvée avec l'ID : " + id));
     }
 
     @Transactional
     public void save(ZoneLivraisonDto dto) {
         if (dto.getId() == null && repository.existsByLibelleIgnoreCase(dto.getLibelle())) {
-            throw new IllegalArgumentException("Une zone de livraison avec ce libellé existe déjà.");
+            throw new BusinessRuleException("Une zone de livraison avec ce libellé existe déjà.", "/zones-livraison");
         }
         if (dto.getId() != null && repository.existsByLibelleIgnoreCaseAndIdNot(dto.getLibelle(), dto.getId())) {
-            throw new IllegalArgumentException("Une zone de livraison avec ce libellé existe déjà.");
+            throw new BusinessRuleException("Une zone de livraison avec ce libellé existe déjà.", "/zones-livraison");
+        }
+        if (dto.getMin() != null && dto.getMax() != null && dto.getMin().compareTo(dto.getMax()) > 0) {
+            throw new BusinessRuleException("La distance minimale ne peut pas dépasser la distance maximale.", "/zones-livraison");
         }
 
         ZonesLivraison zone = (dto.getId() != null) ? findById(dto.getId()) : new ZonesLivraison();
@@ -48,6 +55,9 @@ public class ZoneLivraisonService {
 
     @Transactional
     public void deleteById(Long id) {
+        if (!repository.existsById(id)) {
+            throw new ResourceNotFoundException("Zone de livraison non trouvée avec l'ID : " + id);
+        }
         repository.deleteById(id);
     }
 

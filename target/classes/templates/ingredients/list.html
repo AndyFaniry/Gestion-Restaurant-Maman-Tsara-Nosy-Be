@@ -17,6 +17,7 @@
                             <a th:href="@{/ingredients/new}" class="btn btn-primary">+ Nouvel Ingrédient</a>
                         </div>
                     </div>
+                    <div th:replace="~{fragments/alerts :: flash}"></div>
 
                     <!-- Formulaire de recherche / filtrage -->
                     <div class="card mb-4 shadow-sm">
@@ -71,8 +72,10 @@
                                 <td class="text-end">
                                     <a th:href="@{/ingredients/{id}/detail(id=${ing.id})}" class="btn btn-sm btn-outline-primary">Détail</a>
                                     <a th:href="@{/ingredients/edit/{id}(id=${ing.id})}" class="btn btn-sm btn-outline-warning">Éditer</a>
-                                    <a th:href="@{/ingredients/delete/{id}(id=${ing.id})}" class="btn btn-sm btn-outline-danger" 
-                                    onclick="return confirm('Supprimer cet ingrédient ?')">Supprimer</a>
+                                    <form th:action="@{/ingredients/delete/{id}(id=${ing.id})}" method="post" class="d-inline"
+                                          onsubmit="return confirm('Supprimer cet ingrédient ?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Supprimer</button>
+                                    </form>
                                 </td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(ingredientsList)}">

@@ -82,6 +82,27 @@ public class IngredientsService {
     }
 
     @Transactional(readOnly = true)
+    public IngredientRequestDto toRequestDto(Long id) {
+        Ingredients entity = findById(id);
+        IngredientRequestDto dto = new IngredientRequestDto();
+        dto.setId(entity.getId());
+        dto.setNom(entity.getNom());
+        if (entity.getCategorieIngredients() != null) {
+            dto.setIdCategorie(entity.getCategorieIngredients().getId());
+        }
+        if (entity.getStatutIngredient() != null) {
+            dto.setIdStatut(entity.getStatutIngredient().getId());
+        }
+        if (entity.getFournisseur() != null) {
+            dto.setIdFournisseur(entity.getFournisseur().getId());
+        }
+        if (entity.getUnite() != null) {
+            dto.setIdUnite(entity.getUnite().getId());
+        }
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
     public List<CategorieIngredients> findAllCategories() {
         return categorieRepo.findAll();
     }
@@ -243,9 +264,7 @@ public class IngredientsService {
     }
 
     private TypeMvtIngredient findOrCreateTypeMvt(String libelle) {
-        return typeMvtRepo.findAll().stream()
-                .filter(t -> t.getLibelle().equalsIgnoreCase(libelle))
-                .findFirst()
+        return typeMvtRepo.findByLibelleIgnoreCase(libelle)
                 .orElseGet(() -> {
                     TypeMvtIngredient t = new TypeMvtIngredient();
                     t.setLibelle(libelle);
@@ -253,15 +272,33 @@ public class IngredientsService {
                 });
     }
 
+    /** Seuil en dessous duquel le stock est considéré comme faible (alerte dashboard stock). */
+    public static final double SEUIL_STOCK_FAIBLE = 5.0;
+
     @Transactional(readOnly = true)
     public List<IngredientStockDTO> getGlobalStockState() {
-    return ingredientsRepository.findAll().stream()
-            .map(ing -> {
-                BigDecimal quantite = getStockActuel(ing.getId());
-                return new IngredientStockDTO(ing, quantite.doubleValue());
-            })
-            .collect(Collectors.toList());
-}
+        return ingredientsRepository.findAll().stream()
+                .map(ing -> {
+                    BigDecimal quantite = getStockActuel(ing.getId());
+                    return new IngredientStockDTO(ing, quantite.doubleValue());
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Réintégration de stock (ex. annulation de commande) sans mouvement de caisse.
+     */
+    @Transactional
+    public void reintegrerStock(Long idIngredient, BigDecimal quantite, LocalDate dateMvt) {
+        Ingredients ing = findById(idIngredient);
+        if (quantite == null || quantite.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessRuleException("La quantité à réintégrer doit être supérieure à zéro.");
+        }
+        LocalDate date = dateMvt != null ? dateMvt : LocalDate.now();
+        enregistrerMouvementInventaire(ing, MVT_ENTREE, quantite, date);
+        BigDecimal nouveauStock = getStockActuel(idIngredient).add(quantite);
+        enregistrerSnapshotStock(ing, nouveauStock, date);
+    }
 
     @Transactional(readOnly = true)
     public List<Ingredients> findAll() {

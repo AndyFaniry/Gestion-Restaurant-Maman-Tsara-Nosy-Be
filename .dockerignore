@@ -1,0 +1,13 @@
+.git
+.vscode
+.target
+target
+*.md
+source.txt
+source.sh
+environnement.sh
+compile.sh
+database
+**/agent-transcripts
+**/.DS_Store
+**/Thumbs.db

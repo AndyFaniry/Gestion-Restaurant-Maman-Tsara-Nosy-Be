@@ -7,6 +7,7 @@ import com.gestion.restaurant.service.plats.PlatsService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/plats")
@@ -36,14 +37,17 @@ public class PlatsController {
     }
 
     @PostMapping("/save-multiple")
-    public String saveMultiple(@ModelAttribute("formDto") PlatMultipleRequestDto formDto) {
+    public String saveMultiple(@ModelAttribute("formDto") PlatMultipleRequestDto formDto,
+                               RedirectAttributes redirectAttributes) {
         platsService.saveMultiplePlats(formDto);
+        redirectAttributes.addFlashAttribute("successMessage", "Plat(s) enregistré(s).");
         return "redirect:/plats";
     }
 
-    @GetMapping("/delete/{id}")
-    public String delete(@PathVariable("id") Long id) {
+    @PostMapping("/delete/{id}")
+    public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         platsService.deleteById(id);
+        redirectAttributes.addFlashAttribute("successMessage", "Plat supprimé.");
         return "redirect:/plats";
     }
 }
