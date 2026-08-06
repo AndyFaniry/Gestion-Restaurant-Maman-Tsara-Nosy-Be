@@ -1,17 +1,13 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mouvements Caisse - Maman Tsara Nosy-Be</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:with="pageTitle=${ 'Gestion caisse'}">
+<head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
 <body>
 
 <div class="app">
 
     <!-- Sidebar globale avec l'onglet 'caisse' actif -->
-    <aside th:replace="~{fragments/layout :: sidebar('caisse')}"></aside>
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='caisse')}"></aside>
 
     <div class="main">
         <!-- Topbar globale -->
@@ -61,6 +57,8 @@
 
 </div>
 
-<script th:src="@{/js/script.js}"></script>
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
+
 </body>
 </html>

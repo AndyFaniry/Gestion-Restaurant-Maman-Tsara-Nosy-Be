@@ -1,39 +1,67 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>État des Stocks</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:with="pageTitle='Gestion stock'">
+<head th:replace="~{layout/head :: head(pageTitle=${pageTitle})}"></head>
 <body>
-    <div class="dashboard-container">
-        <main class="content">
-            <header class="header">
-                <h1>Mise à Jour / État du Stock</h1>
-                <a th:href="@{/stocks/new}" class="btn btn-primary">Ajuster le Stock</a>
-            </header>
-            <section class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th><th>Ingrédient</th><th>Date Relevé</th><th>Quantité restante</th><th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="s : ${stocksList}">
-                            <td th:text="${s.id}">1</td>
-                            <td th:text="${s.ingredient != null ? s.ingredient.nom : 'N/A'}">Ingrédient</td>
-                            <td th:text="${s.dateEtatStock}">2026-07-30</td>
-                            <td th:text="${#numbers.formatDecimal(s.quantite, 1, 'POINT', 3, 'COMMA')}">10.000</td>
-                            <td class="actions">
-                                <a th:href="@{/stocks/edit/{id}(id=${s.id})}" class="btn btn-warning">Modifier</a>
-                                <a th:href="@{/stocks/delete/{id}(id=${s.id})}" class="btn btn-danger" onclick="return confirm('Effacer ce relevé de stock ?');">Supprimer</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
-        </main>
+
+<div class="app">
+
+  <!-- Sidebar globale -->
+  <aside th:replace="~{layout/sidebar :: sidebar(activeMenu='stocks')}"></aside>
+
+  <!-- Conteneur principal -->
+  <div class="main">
+    
+    <!-- Topbar globale -->
+    <div th:replace="~{layout/navbar :: topbar(pageTitle=${pageTitle})}"></div>
+
+    <!-- Contenu de la page -->
+    <div class="content">
+      
+      <div class="page-header">
+        <div>
+          <h2>Mise à Jour / État du Stock</h2>
+          <div class="breadcrumb">Accueil / <span>Stocks</span></div>
+        </div>
+        <a th:href="@{/stocks/new}" class="btn btn-primary">Ajuster le Stock</a>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Ingrédient</th>
+              <th>Date Relevé</th>
+              <th>Quantité restante</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="s : ${stocksList}">
+              <td th:text="${s.id}">1</td>
+              <td th:text="${s.ingredient != null ? s.ingredient.nom : 'N/A'}">Ingrédient</td>
+              <td th:text="${s.dateEtatStock}">2026-07-30</td>
+              <td th:text="${s.quantite != null ? #numbers.formatDecimal(s.quantite, 1, 'POINT', 3, 'COMMA') : '0.000'}">10.000</td>
+              <td class="actions">
+                <a th:href="@{/stocks/edit/{id}(id=${s.id})}" class="btn btn-warning">Modifier</a>
+                <a th:href="@{/stocks/delete/{id}(id=${s.id})}" class="btn btn-danger" onclick="return confirm('Effacer ce relevé de stock ?');">Supprimer</a>
+              </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(stocksList)}">
+              <td colspan="5" class="text-center">Aucun relevé de stock trouvé.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
+  </div>
+
+</div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+<th:block th:replace="~{layout/scripts :: scripts}"></th:block>
+
 </body>
 </html>
