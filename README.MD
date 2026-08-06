@@ -18,6 +18,7 @@ Application web de gestion pour le restaurant **Maman Tsara** (Nosy Be) : stocks
 - [Structure du projet](#structure-du-projet)
 - [Modules fonctionnels](#modules-fonctionnels)
 - [Base de données](#base-de-données)
+- [Tests](#tests)
 - [Scripts utiles](#scripts-utiles)
 - [Dépannage](#dépannage)
 
@@ -380,6 +381,45 @@ docker exec -it mon_postgres_db psql -U dev1 -d restaurant
 
 ---
 
+## Tests
+
+Pyramide en place sous `src/test/java` :
+
+| Couche | Emplacement | Contenu |
+|--------|-------------|---------|
+| Unitaires | `.../service/**` | Mockito, tous les services métier |
+| Intégration | `.../integration/**` (`*IT`) | Postgres réel (Testcontainers ou fallback) |
+| Fonctionnel | `.../functional/**` | MockMvc + Security + CSRF, parcours HTTP |
+
+**Prérequis**
+
+- Java **21**, Maven (ou image Docker Maven)
+- Docker recommandé (Testcontainers Postgres 16)
+- Sinon : base `restaurant_test` sur Postgres local + variable `TEST_DATABASE_URL`
+
+Créer la base de fallback (Compose) :
+
+```bash
+docker exec restaurant-db psql -U dev1 -d postgres -c "CREATE DATABASE restaurant_test OWNER dev1;"
+```
+
+**Lancer les tests**
+
+```bash
+# Machine avec Java 21 + Docker (Testcontainers)
+./mvnw test
+
+# Via Docker Maven + Postgres Compose (fallback)
+docker run --rm --add-host=host.docker.internal:host-gateway \
+  -v "${PWD}:/app" -w /app \
+  -e "TEST_DATABASE_URL=jdbc:postgresql://host.docker.internal:5432/restaurant_test?user=dev1&password=dev" \
+  maven:3.9.9-eclipse-temurin-21 mvn test
+```
+
+Compte admin de test : `admin` / `test` (voir `application-test.properties`).
+
+---
+
 ## Scripts utiles
 
 | Script | Rôle |
@@ -439,12 +479,6 @@ Conventions du projet :
 3. **Repository** : accès données JPA (+ Specifications pour les filtres).
 4. **DTO / Mapper** : échanges formulaires ↔ entités.
 5. **Templates Thymeleaf** : UI serveur dans `resources/templates`.
-
-Tests :
-
-```bash
-./mvnw test
-```
 
 ---
 

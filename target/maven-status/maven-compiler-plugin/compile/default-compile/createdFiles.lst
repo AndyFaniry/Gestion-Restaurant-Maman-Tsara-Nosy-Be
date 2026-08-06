@@ -6,7 +6,6 @@ com/gestion/restaurant/entity/livraisons/ZonesLivraison.class
 com/gestion/restaurant/entity/materielles/HistoriqueMaterielles.class
 com/gestion/restaurant/entity/commandes/DetailsCommandes.class
 com/gestion/restaurant/entity/materielles/TypeMvtMaterielles.class
-com/gestion/restaurant/service/ingredients/StockIngredientService.class
 com/gestion/restaurant/entity/ingredients/HistoriqueIngredients.class
 com/gestion/restaurant/controller/plats/PlatsController.class
 com/gestion/restaurant/entity/clients/Clients.class
@@ -14,7 +13,6 @@ com/gestion/restaurant/repository/plats/PlatsRepository.class
 com/gestion/restaurant/service/personnels/PersonnelsService.class
 com/gestion/restaurant/dto/ingredients/IngredientMapper.class
 com/gestion/restaurant/dto/plats/PlatMultipleRequestDto.class
-com/gestion/restaurant/dto/ingredients/AchatIngredientRequestDto.class
 com/gestion/restaurant/dto/ingredients/IngredientRequestDto.class
 com/gestion/restaurant/exception/BusinessRuleException.class
 com/gestion/restaurant/dto/recette/RecetteIngredientFormDto.class
