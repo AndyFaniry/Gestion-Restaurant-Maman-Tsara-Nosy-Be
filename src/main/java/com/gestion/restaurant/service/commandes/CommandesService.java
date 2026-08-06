@@ -21,6 +21,8 @@ import com.gestion.restaurant.repository.plats.PlatsRepository;
 import com.gestion.restaurant.repository.recettes.RecettePlatsRepository;
 import com.gestion.restaurant.service.caisse.CaisseService;
 import com.gestion.restaurant.service.ingredients.IngredientsService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,8 +65,8 @@ public class CommandesService {
     }
 
     @Transactional(readOnly = true)
-    public List<Commandes> findAll() {
-        return commandesRepository.findAllWithRelations();
+    public Page<Commandes> findAll(Pageable pageable) {
+        return commandesRepository.findAllWithRelations(pageable);
     }
 
     @Transactional(readOnly = true)

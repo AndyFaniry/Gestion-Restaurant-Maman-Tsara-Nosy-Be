@@ -2,7 +2,6 @@ package com.gestion.restaurant.specification.clients;
 
 import com.gestion.restaurant.dto.clients.ClientSearchCriteria;
 import com.gestion.restaurant.entity.clients.Clients;
-import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -13,12 +12,11 @@ public class ClientsSpecification {
 
     public static Specification<Clients> withFilters(ClientSearchCriteria criteria) {
         return (root, query, cb) -> {
-            if (query.getResultType() != null && Clients.class.equals(query.getResultType())) {
-                root.fetch("typeClient", JoinType.LEFT);
-                query.distinct(true);
-            }
-
             List<Predicate> predicates = new ArrayList<>();
+
+            if (criteria == null) {
+                return cb.conjunction();
+            }
 
             if (criteria.getNom() != null && !criteria.getNom().isBlank()) {
                 predicates.add(cb.like(cb.lower(root.get("nom")), "%" + criteria.getNom().toLowerCase() + "%"));

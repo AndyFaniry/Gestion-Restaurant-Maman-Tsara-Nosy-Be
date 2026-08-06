@@ -1,7 +1,6 @@
 package com.gestion.restaurant.service.ingredients;
 
 import com.gestion.restaurant.dto.ingredients.IngredientRequestDto;
-import com.gestion.restaurant.dto.ingredients.IngredientStockDTO;
 import com.gestion.restaurant.entity.fournisseurs.Fournisseurs;
 import com.gestion.restaurant.entity.ingredients.*;
 import com.gestion.restaurant.exception.BusinessRuleException;
@@ -131,13 +130,17 @@ class IngredientsServiceTest {
 
     @Test
     void getGlobalStockState_alerteSeuil() {
-        when(ingredientsRepository.findAllWithRelations()).thenReturn(List.of(ingredient));
+        when(ingredientsRepository.count()).thenReturn(1L);
+        when(ingredientsRepository.findAllWithRelations(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(ingredient)));
         when(etatStockRepo.findLatestQuantiteByIngredient())
                 .thenReturn(java.util.Collections.singletonList(new Object[]{1L, 3.0}));
 
-        List<IngredientStockDTO> stocks = ingredientsService.getGlobalStockState();
-        assertThat(stocks).hasSize(1);
-        assertThat(stocks.getFirst().getQuantiteActuelle()).isLessThan(IngredientsService.SEUIL_STOCK_FAIBLE);
+        var stocks = ingredientsService.getGlobalStockState(org.springframework.data.domain.Pageable.unpaged());
+        assertThat(stocks.page().getContent()).hasSize(1);
+        assertThat(stocks.page().getContent().getFirst().getQuantiteActuelle())
+                .isLessThan(IngredientsService.SEUIL_STOCK_FAIBLE);
+        assertThat(stocks.nombreAlerteStock()).isEqualTo(1);
     }
 
     @Test
