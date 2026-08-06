@@ -20,7 +20,7 @@ services:
     image: postgres:16-alpine
     container_name: mon_postgres_db
     environment:
-      - POSTGRES_DB=nom_db
+      - POSTGRES_DB=restaurant
       - POSTGRES_USER=dev1
       - POSTGRES_PASSWORD=dev
     ports:
